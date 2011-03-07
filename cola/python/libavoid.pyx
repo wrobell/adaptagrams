@@ -69,4 +69,13 @@ cdef class Point(object):
 #print p2.x, p2.y
 #print p3.x, p3.y
 
+
+# The following classes lose ownership once passed to a Router:
+#        Avoid::ShapeRef,
+#        Avoid::ConnRef,
+#        Avoid::ClusterRef,
+#        Avoid::JunctionRef,
+# In the next case ownership is passed to the parent shapeRef/junctionRef
+#        Avoid::ShapeConnectionPin
+
 # vim: sw=4:et:ai

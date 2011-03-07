@@ -1,8 +1,9 @@
+# Cython version of libavoid/tests/multiconnact.cpp.
 
 from cython.operator cimport dereference as deref
 from _libavoid cimport * #Point, ConnRef, Router, RouterFlag
 
-cdef void connCallback(void *ptr):
+cdef void multiconnact_callback(void *ptr):
     cdef ConnRef *connRef = <ConnRef *>ptr
     cdef PolyLine route = connRef.displayRoute()
 
@@ -18,12 +19,12 @@ def test_multiconnact():
     cdef Point srcPt = Point(0, 400)
     cdef Point dstPt = Point(775, 400)
     cdef ConnRef *connRef = new ConnRef(router, ConnEnd(srcPt), ConnEnd(dstPt), 0)
-    connRef.setCallback(connCallback, connRef)
+    connRef.setCallback(multiconnact_callback, connRef)
 
     cdef Point srcPt2 = Point(775,625)
     cdef Point dstPt2 = Point(350,475)
     cdef ConnRef *connRef2 = new ConnRef(router, ConnEnd(srcPt2), ConnEnd(dstPt2), 0)
-    connRef2.setCallback(connCallback, connRef2)
+    connRef2.setCallback(multiconnact_callback, connRef2)
      
     router.processTransaction()
 
@@ -36,6 +37,10 @@ def test_multiconnact():
     connRef.setEndpoints(ConnEnd(Point(0,400)), ConnEnd(Point(775,400)))
     connRef2.setEndpoints(ConnEnd(Point(775,625)), ConnEnd(Point(350,475)))
     router.processTransaction()
+
+
+if __name__ == '__main__':
+    test_multiconnact()
 
 
 # vim:sw=4:et:ai
