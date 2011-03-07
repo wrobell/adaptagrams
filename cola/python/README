@@ -1,0 +1,22 @@
+LibAvoid Python bindings
+========================
+
+Building
+--------
+To build the Python bindings you should be able to build libavoid as described in the main README file.
+
+To build the bindings you'll need to have Python installed. Also Cython <http://cython.org> is required. This package can be installed by hand or with the help of `easy_install` or `pip`.
+
+Once Python and Cython are in place, simply build the bindings:
+
+  $ python setup.py build_ext --inplace
+
+or do a complete install:
+
+  $ python setup.py install
+
+To execute the test cases, use nose <..>:
+
+  $ nosetests -v
+
+
