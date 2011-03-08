@@ -1,7 +1,7 @@
 # Cython version of libavoid/tests/example.cpp.
 
 from cython.operator cimport dereference as deref
-from _libavoid cimport * #Point, ConnRef, Router, RouterFlag
+from avoid cimport * #Point, ConnRef, Router, RouterFlag
 
 cdef void example_callback(void *ptr):
     cdef ConnRef *connRef = <ConnRef *>ptr

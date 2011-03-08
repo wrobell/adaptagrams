@@ -33,33 +33,12 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         fixedSharedPathPenalty
         portDirectionPenalty
 
-    # Forward reference??
-    cdef cppclass ShapeRef
-    cdef cppclass JunctionRef
-    cdef cppclass Point
-    cdef cppclass Polygon
 
-    cdef cppclass Router:
-        Router(RouterFlag)
-        void setTransactionUse(bint)
-        bint transactionUse()
-        bint processTransaction()
-        void setRoutingPenalty(PenaltyType, double penVal)
-        double routingPenalty(PenaltyType)
-        
-        void addShape(ShapeRef*)
-        void removeShape(ShapeRef*)
-        void moveShape(ShapeRef*, Polygon&)
-        void moveShape(ShapeRef*, double dx, double dy)
+    cdef cppclass Router
 
-        void addJunction(JunctionRef*)
-        void removeJunction(JunctionRef*)
-        void moveJunction(JunctionRef*, Point& newPosition)
-        void moveJunction(JunctionRef*, double dx, double dy)
- 
- 
 
     cdef cppclass Point:
+        Point()
         Point(double, double)
         int id
         double x, y
@@ -99,10 +78,28 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         Rectangle(Point& topLeft, Point& bottomRight)
         Rectangle(Point& centre, double width, double height)
 
+    
+    cdef cppclass Obstacle:
+        unsigned int id()
+        Polygon& polygon()
+        Router* router()
+        void boundingBox(BBox& bbox)
+
+
+    cdef cppclass ShapeRef(Obstacle):
+        ShapeRef(Router *router, Polygon &poly, unsigned int id)
+        #ShapeRef(Router *router, Polygon &poly)
+        #void transformConnectionPinPositions(ShapeTransformationType transform)
+        #ConnRefList attachedConnectors(void)
+
+
+    cdef cppclass JunctionRef(Obstacle):
+        Junction()
+
 
     cdef cppclass ConnEnd:
         ConnEnd(Point&)
-        ConnEnd(Point&, ConnDirFlags)
+        ConnEnd(Point&, ConnDirFlag)
         #ConnEnd(ShapeRef&, unsigned int connectionPinClassID)
         #ConnEnd(JunctionRef&)
         Point position()
@@ -120,22 +117,24 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         PolyLine& displayRoute()
 
 
-    cdef cppclass Obstacle:
-        unsigned int id()
-        Polygon& polygon()
-        Router* router()
-        void boundingBox(BBox& bbox)
+    cdef cppclass Router:
+        Router(RouterFlag)
+        void setTransactionUse(bint)
+        bint transactionUse()
+        bint processTransaction()
+        void setRoutingPenalty(PenaltyType, double penVal)
+        double routingPenalty(PenaltyType)
+        
+        void addShape(ShapeRef*)
+        void removeShape(ShapeRef*)
+        void moveShape(ShapeRef*, Polygon&)
+        void moveShape(ShapeRef*, double dx, double dy)
 
-
-    cdef cppclass ShapeRef(Obstacle):
-        ShapeRef(Router *router, Polygon &poly, unsigned int id)
-        ShapeRef(Router *router, Polygon &poly)
-        #void transformConnectionPinPositions(ShapeTransformationType transform)
-        #ConnRefList attachedConnectors(void)
-
-
-    cdef cppclass Junction(Obstacle):
-        Junction()
-
+        void addJunction(JunctionRef*)
+        void removeJunction(JunctionRef*)
+        void moveJunction(JunctionRef*, Point& newPosition)
+        void moveJunction(JunctionRef*, double dx, double dy)
+ 
+ 
 
 # vim: sw=4:et:ai

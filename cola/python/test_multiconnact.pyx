@@ -1,7 +1,7 @@
 # Cython version of libavoid/tests/multiconnact.cpp.
 
 from cython.operator cimport dereference as deref
-from _libavoid cimport * #Point, ConnRef, Router, RouterFlag
+from avoid cimport * #Point, ConnRef, Router, RouterFlag
 
 cdef void multiconnact_callback(void *ptr):
     cdef ConnRef *connRef = <ConnRef *>ptr

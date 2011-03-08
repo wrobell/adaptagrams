@@ -2,9 +2,9 @@
 Test suite. To run the tests, execute nosetests from the command line.
 """
 
-from libavoid import Point, Polygon, Rectangle
-
 from nose.tools import *
+from libavoid import *
+
 
 def test_point():
     p1 = Point(2, 4)
@@ -45,5 +45,21 @@ def test_rectangle():
     rect = Rectangle((0, 0), (3, 4))
     assert_equals((3, 4), rect[1])
     assert_equals((0, 0), rect[3])
+
+def test_connend():
+    c = ConnEnd((2,4))
+    assert_equals((2, 4), c.position)
+
+def test_router_instantiation():
+    router = Router(Router.POLY_LINE)
+
+def test_shaperef():
+    router = Router()
+    poly = Polygon((0, 0), (4, 0), (4, 4))
+    shape = ShapeRef(router, poly)
+    del poly
+    assert_equals([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0)], shape.polygon)
+    assert_equals(((0.0, 0.0), (4.0, 4.0)), shape.boundingBox)
+    assert_true(router is shape.router)
 
 # vim:sw=4:et:ai

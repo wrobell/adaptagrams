@@ -1,67 +1,7 @@
 
 from cython.operator cimport dereference as deref
-from _libavoid cimport Point as cPoint
-from _libavoid cimport Polygon as cPolygon
-from _libavoid cimport Rectangle as cRectangle
-from _libavoid cimport ConnEnd as cConnEnd
-from _libavoid cimport ConnRef as cConnRef
+cimport avoid
 
-
-cdef class Point(object):
-    # Can we do without this? coerce to tuple (x, y)
-    cdef cPoint *thisptr
-    cdef bint owner
-    def __cinit__(self, double x, double y):
-        self.thisptr = new cPoint(x, y)
-        self.owner = True
-
-    def __dealloc__(self):
-        if self.owner:
-            del self.thisptr
-
-# <	0
-# ==	2
-# > 	4
-# <=	1
-# !=	3
-# >=	5
-
-#    def __richcmp__(self, Point other, int op):
-#        p1 = self.thisptr
-#        p2 = other.thisptr
-#        if op == 0: # <
-#            pass
-#        elif op == 1: # <=
-#            pass
-#        elif op == 2: # ==
-#            pass #return p1 == p2
-#        elif op == 3: # !=
-#            pass
-#        elif op == 4: # >
-#            pass
-#        elif op == 5: # >=
-#            pass
-
-#    def __add__(self, Point other):
-#        #cdef cPoint cp = deref(self.thisptr) + deref(other.thisptr)
-#        #return Point(cp.x, cp.y)
-#        cdef cPoint p1 = deref(self.thisptr)
-#        cdef cPoint p2 = deref(other.thisptr)
-#        cdef cPoint cp = p1 + p2
-#        return Point(cp.x, cp.y)
-
-    property x:
-        def __get__(self): return self.thisptr.x
-        def __set__(self, x): self.thisptr.x = x
-    
-    property y:
-        def __get__(self): return self.thisptr.y
-        def __set__(self, y): self.thisptr.y = y
-    
-    property id:
-        def __get__(self): return self.thisptr.id
-        def __set__(self, id): self.thisptr.id = id
-    
 
 # The following classes lose ownership once passed to a Router:
 #        Avoid::ShapeRef,
@@ -72,7 +12,7 @@ cdef class Point(object):
 #        Avoid::ShapeConnectionPin
 
 cdef class Polygon:
-    cdef cPolygon *thisptr
+    cdef avoid.Polygon *thisptr
     cdef bint owner
     def __cinit__(self, *points):
         """
@@ -82,38 +22,103 @@ cdef class Polygon:
         >>> p
         <...>
         """
-        self.thisptr = new cPolygon(len(points))
+        self.thisptr = new avoid.Polygon(len(points))
         for index, point in enumerate(points):
-            self.thisptr.ps[index] = cPoint(point[0], point[1])
+            self.thisptr.ps[index] = avoid.Point(point[0], point[1])
         self.owner = True
 
     def __dealloc__(self):
         if self.owner:
             del self.thisptr
+
+    def __len__(self):
+        return self.thisptr.ps.size()
 
     def __getitem__(self, index):
         return(self.thisptr.ps[index].x, self.thisptr.ps[index].y)
 
     def __setitem__(self, index, point):
         assert index < self.thisptr.ps.size()
-        self.thisptr.ps[index] = cPoint(point[0], point[1])
+        self.thisptr.ps[index] = avoid.Point(point[0], point[1])
 
 
 cdef class Rectangle(Polygon):
-    def __cinit__(self, topLeft, bottomRight):
-        self.thisptr = new cRectangle(cPoint(topLeft[0], topLeft[1]),
-                                      cPoint(bottomRight[0], bottomRight[1]))
+    def __cinit__(self, object topLeft, object bottomRight):
+        self.thisptr = new avoid.Rectangle(avoid.Point(topLeft[0], topLeft[1]),
+                                      avoid.Point(bottomRight[0], bottomRight[1]))
         self.owner = True
 
-cdef class ConnEnd:
-    cdef cConnEnd *thisptr
+
+cdef class Router
+
+
+cdef class Obstacle:
+    cdef avoid.Obstacle *thisptr
     cdef bint owner
-    def __cinit__(self, point):
-        self.thisptr = new cConnEnd(cPoint(point[0], point[1]))
+
+    def __cinit__(self):
+        pass
+
+    property polygon:
+        def __get__(self):
+            cdef avoid.Polygon polygon = self.thisptr.polygon()
+            lst = []
+            for index from 0 <= index < polygon.ps.size():
+                lst.append((polygon.ps[index].x,
+                            polygon.ps[index].y))
+            return lst
+    property boundingBox:
+        def __get__(self):
+            cdef avoid.BBox bbox
+            self.thisptr.boundingBox(bbox)
+            return ((bbox.a.x, bbox.a.y), (bbox.b.x, bbox.b.y))
+
+cdef class ShapeRef(Obstacle):
+    def __cinit__(self, Router router, Polygon polygon):
+        self.thisptr = new avoid.ShapeRef(router.thisptr, deref(polygon.thisptr), 0) #int(id(self)))
         self.owner = True
 
     def __dealloc__(self):
         if self.owner:
             del self.thisptr
+
+
+cdef class ConnEnd:
+    cdef avoid.ConnEnd *thisptr
+    cdef bint owner
+
+    def __cinit__(self, object point=None, object shape=None, object junction=None):
+        if point:
+            self.thisptr = new avoid.ConnEnd(avoid.Point(point[0], point[1]))
+        #elif shape:
+        #    self.thisptr = new avoid.ConnEnd(avoid.Point(point[0], point[1]))
+        self.owner = True
+
+    def __dealloc__(self):
+        if self.owner:
+            del self.thisptr
+
+    property position:
+        def __get__(self):
+            cdef avoid.Point p = self.thisptr.position()
+            return (p.x, p.y)
+
+
+cdef class Router:
+    POLY_LINE = avoid.PolyLineRouting
+    ORTHOGONAL = avoid.OrthogonalRouting
+
+    cdef avoid.Router *thisptr
+    def __cinit__(self, router_flag=avoid.PolyLineRouting):
+        self.thisptr = new avoid.Router(router_flag)
+
+    def __dealloc__(self):
+        del self.thisptr
+
+    def addShape(self, object shape):
+        pass
+        #self.thisptr.addShape(<avoid.ShapeRef*>(shape.thisptr))
+
+
 
 # vim: sw=4:et:ai
