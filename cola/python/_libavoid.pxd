@@ -17,8 +17,26 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         PolyLineRouting
         OrthogonalRouting
 
+    cdef enum ConnDirFlag:
+        ConnDirNone
+        ConnDirUp
+        ConnDirDown
+        ConnDirLeft
+        ConnDirRight
+        ConnDirAll
+
+    cdef enum PenaltyType:
+        segmentPenalty
+        anglePenalty
+        crossingPenalty
+        clusterCrossingPenalty
+        fixedSharedPathPenalty
+        portDirectionPenalty
+
     # Forward reference??
     cdef cppclass ShapeRef
+    cdef cppclass JunctionRef
+    cdef cppclass Point
     cdef cppclass Polygon
 
     cdef cppclass Router:
@@ -26,15 +44,22 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         void setTransactionUse(bint)
         bint transactionUse()
         bint processTransaction()
-        # ShapeRef*
+        void setRoutingPenalty(PenaltyType, double penVal)
+        double routingPenalty(PenaltyType)
+        
         void addShape(ShapeRef*)
         void removeShape(ShapeRef*)
         void moveShape(ShapeRef*, Polygon&)
         void moveShape(ShapeRef*, double dx, double dy)
 
+        void addJunction(JunctionRef*)
+        void removeJunction(JunctionRef*)
+        void moveJunction(JunctionRef*, Point& newPosition)
+        void moveJunction(JunctionRef*, double dx, double dy)
+ 
+ 
 
     cdef cppclass Point:
-        Point()
         Point(double, double)
         int id
         double x, y
@@ -76,7 +101,10 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
 
 
     cdef cppclass ConnEnd:
-        ConnEnd(Point& point)
+        ConnEnd(Point&)
+        ConnEnd(Point&, ConnDirFlags)
+        #ConnEnd(ShapeRef&, unsigned int connectionPinClassID)
+        #ConnEnd(JunctionRef&)
         Point position()
 
 
@@ -92,16 +120,21 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         PolyLine& displayRoute()
 
 
-    cdef cppclass ShapeRef:
+    cdef cppclass Obstacle:
+        unsigned int id()
+        Polygon& polygon()
+        Router* router()
+        void boundingBox(BBox& bbox)
+
+
+    cdef cppclass ShapeRef(Obstacle):
         ShapeRef(Router *router, Polygon &poly, unsigned int id)
         ShapeRef(Router *router, Polygon &poly)
-        Polygon& polygon()
         #void transformConnectionPinPositions(ShapeTransformationType transform)
-        void boundingBox(BBox& bbox)
         #ConnRefList attachedConnectors(void)
 
 
-    cdef cppclass Junction:
+    cdef cppclass Junction(Obstacle):
         Junction()
 
 
