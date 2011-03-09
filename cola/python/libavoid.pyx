@@ -17,6 +17,19 @@ cdef unsigned int iid(object o):
 # In the next case ownership is passed to the parent shapeRef/junctionRef
 #        Avoid::ShapeConnectionPin
 
+cdef inline avoid.Polygon* new_polygon(points):
+    """
+    Create a new Polygon instance. Caller is responsible for deleting it.
+    """
+    cdef avoid.Polygon *polygon
+    cdef int i
+    cdef double x, y
+    polygon = new avoid.Polygon(len(points))
+    for i, (x, y) in enumerate(points):
+        polygon.ps[i] = avoid.Point(x, y)
+    return polygon
+
+
 cdef class Polygon:
     cdef avoid.Polygon *thisptr
     cdef bint owner
@@ -29,9 +42,7 @@ cdef class Polygon:
         >>> p
         <...>
         """
-        self.thisptr = new avoid.Polygon(len(points))
-        for index, (x, y) in enumerate(points):
-            self.thisptr.ps[index] = avoid.Point(x, y)
+        self.thisptr = new_polygon(points)
         self.owner = True
 
     def __dealloc__(self):
@@ -152,6 +163,8 @@ cdef class Router:
     cdef avoid.Router *thisptr
     cdef set _obstacles
     cdef set _connrefs
+    # Obstacles are not removed directly. First a processTransaction() is
+    # required. Hence we need to cache them before handing over control.
     cdef set _to_be_removed
 
     def __cinit__(self, router_flag=avoid.PolyLineRouting):
@@ -173,15 +186,24 @@ cdef class Router:
         return result
 
     def addShape(self, ShapeRef shape):
+        assert self is shape.router
         self._obstacles.add(shape)
         shape.owner = False
         self.thisptr.addShape(<avoid.ShapeRef*>(shape.thisptr))
 
     def removeShape(self, ShapeRef shape):
+        assert self is shape.router
         self.thisptr.removeShape(<avoid.ShapeRef*>(shape.thisptr))
         self._obstacles.remove(shape)
-        self._to_be_removed.add(shape)
+        if self.thisptr.transactionUse():
+            self._to_be_removed.add(shape)
 
+    def moveShape(self, ShapeRef shape, Polygon polygon):
+        assert self is shape.router
+        self.thisptr.moveShape(<avoid.ShapeRef*>shape.thisptr, deref(polygon.thisptr))
 
+    def moveShapeRel(self, ShapeRef shape, double dx, double dy):
+        assert self is shape.router
+        self.thisptr.moveShape(<avoid.ShapeRef*>shape.thisptr, dx, dy)
 
 # vim: sw=4:et:ai

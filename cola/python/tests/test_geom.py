@@ -25,10 +25,12 @@ def test_polygon_has_fixed_size():
     poly = Polygon((0, 0), (4,0), (4, 4))
     poly[4] = (0, 0)
         
+
 @raises(ValueError)
 def test_polygon_can_only_take_pairs():
     poly = Polygon((0, 0), (4,0), (4, 4))
     poly[1] = (0, 0, 0)
+
 
 def test_rectangle():
     rect = Rectangle((0, 0), (3, 4))
@@ -87,22 +89,43 @@ def test_router_and_shape():
     router.processTransaction()
     assert_equals(2, sys.getrefcount(shape)) # shape + refcount
     
-#def test_router_and_shape_delete_router():
-#    router = Router()
-#    poly = Polygon((0, 0), (4, 0), (4, 4))
-#    shape = ShapeRef(router, poly)
-#    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
-#    router.addShape(shape)
-#    assert_equals(3, sys.getrefcount(shape)) # shape + refcount
-#    #del router
-#    #assert_equals(2, sys.getrefcount(shape)) # shape + refcount
+def test_router_and_shape_delete_router():
+    router = Router()
+    poly = Polygon((0, 0), (4, 0), (4, 4))
+    shape = ShapeRef(router, poly)
+    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
+    router.addShape(shape)
+    assert_equals(3, sys.getrefcount(shape)) # shape + refcount
+    del router
+    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
     
 
-#def test_shaperef_add_to_different_router():
-#    router = Router()
-#    router2 = Router()
-#    poly = Polygon((0, 0), (4, 0), (4, 4))
-#    shape = ShapeRef(router, poly)
-#    router2.addShape(shape)
+@raises(AssertionError)
+def test_shaperef_add_to_different_router():
+    router = Router()
+    router2 = Router()
+    poly = Polygon((0, 0), (4, 0), (4, 4))
+    shape = ShapeRef(router, poly)
+    router2.addShape(shape)
+
+
+def test_shaperef_move():
+    router = Router()
+    poly = Polygon((0, 0), (4, 0), (4, 4))
+    shape = ShapeRef(router, poly)
+    del poly
+    router.addShape(shape)
+    router.processTransaction()
+    router.moveShape(shape, Polygon((1,1), (5,1), (5,5)))
+    router.processTransaction()
+    assert_equals((1.0, 1.0), shape.polygon[0])
+
+    router.moveShapeRel(shape, 1, 1)
+    router.processTransaction()
+    assert_equals((2.0, 2.0), shape.polygon[0])
+
+    router.removeShape(shape)
+    router.processTransaction()
+
 
 # vim:sw=4:et:ai
