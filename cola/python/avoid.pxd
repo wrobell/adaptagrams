@@ -84,6 +84,7 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         Polygon& polygon()
         Router* router()
         void boundingBox(BBox& bbox)
+        Point position()
 
 
     cdef cppclass ShapeRef(Obstacle):
@@ -94,7 +95,7 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
 
 
     cdef cppclass JunctionRef(Obstacle):
-        Junction()
+        JunctionRef(Router *router, Point position, unsigned int id)
 
 
     cdef cppclass ConnEnd:

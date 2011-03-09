@@ -2,12 +2,12 @@
 from cython.operator cimport dereference as deref
 cimport avoid
 
-import weakref
-#from cython.weakref cimport PyWeakref_NewRef, PyWeakref_GetObject, PyWeakref_CheckRef
+from cpython.weakref cimport PyWeakref_NewRef, PyWeakref_GetObject, PyWeakref_CheckRef
+from cpython.ref cimport Py_INCREF
 
 
 cdef unsigned int iid(object o):
-    return id(o) % 0xFFFFFFFF
+    return id(o) & 0xFFFFFFFF
 
 # The following classes lose ownership once passed to a Router:
 #        Avoid::ShapeRef,
@@ -63,13 +63,16 @@ cdef class Obstacle:
     cdef bint owner
     cdef object _router_ref
 
-    #def __init__(self, Router router not None):
-    #    self._router_ref = PyWeakref_NewRe(router, None)
+    property position:
+        def __get__(self):
+            cdef avoid.Point p = self.thisptr.position()
+            return (p.x,p.y)
 
     property polygon:
         def __get__(self):
             cdef avoid.Polygon polygon = self.thisptr.polygon()
-            lst = []
+            cdef unsigned int index
+            cdef object lst = []
             for index from 0 <= index < polygon.ps.size():
                 lst.append((polygon.ps[index].x,
                             polygon.ps[index].y))
@@ -83,18 +86,30 @@ cdef class Obstacle:
 
     property router:
         def __get__(self):
-            return self._router_ref()
+            return <object>PyWeakref_GetObject(self._router_ref)
+
 
 cdef class ShapeRef(Obstacle):
-    def __cinit__(self, Router router, Polygon polygon):
-        Obstacle.__init__(self, router)
+    def __cinit__(object self, Router router, Polygon polygon):
         self.thisptr = new avoid.ShapeRef(router.thisptr, deref(polygon.thisptr), iid(self))
         self.owner = True
-        self._router_ref = weakref.ref(router)
+        self._router_ref = PyWeakref_NewRef(router, None)
 
     def __dealloc__(self):
         if self.owner:
             del self.thisptr
+
+
+cdef class JunctionRef(Obstacle):
+    """
+    A Junction denotes a point where one or more connection ends (ConnEnd)
+    come together.
+    """
+
+    def __cinit__(object self, Router router, object position):
+        self.thisptr = new avoid.JunctionRef(router.thisptr, avoid.Point(position[0], position[1]), iid(self))
+        self.owner = True
+        self._router_ref = PyWeakref_NewRef(router, None)
 
 
 cdef class ConnEnd:
@@ -105,7 +120,7 @@ cdef class ConnEnd:
         if point:
             self.thisptr = new avoid.ConnEnd(avoid.Point(point[0], point[1]))
         #elif shape:
-        #    self.thisptr = new avoid.ConnEnd(avoid.Point(point[0], point[1]))
+        #    self.thisptr = new avoid.ConnEnd(shape.thisptr)
         self.owner = True
 
     def __dealloc__(self):
@@ -117,8 +132,6 @@ cdef class ConnEnd:
             cdef avoid.Point p = self.thisptr.position()
             return (p.x, p.y)
 
-# Should be a weakrefdict
-cdef object _routers = {}
 
 cdef class Router:
     POLY_LINE = avoid.PolyLineRouting
@@ -126,14 +139,14 @@ cdef class Router:
 
     cdef avoid.Router *thisptr
 
-    cdef object __weakref__
-
     def __cinit__(self, router_flag=avoid.PolyLineRouting):
         self.thisptr = new avoid.Router(router_flag)
         #_routers[id(self.thisptr)] = self
 
     def __dealloc__(self):
         del self.thisptr
+
+    cdef object __weakref__
 
     def addShape(self, object shape):
         pass

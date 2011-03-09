@@ -2,6 +2,8 @@
 Test suite. To run the tests, execute nosetests from the command line.
 """
 
+import sys
+import weakref
 from nose.tools import *
 from libavoid import *
 
@@ -35,6 +37,23 @@ def test_connend():
 
 def test_router_instantiation():
     router = Router(Router.POLY_LINE)
+    assert_equals(2, sys.getrefcount(router)) # router + refcount
+    w_router = weakref.ref(router)
+    del router
+    assert_equals(None, w_router())
+
+def test_router_shape_refcount():
+    router = Router()
+    poly = Polygon((0, 0), (4, 0), (4, 4))
+    shape = ShapeRef(router, poly)
+    assert_equals(2, sys.getrefcount(router)) # router + refcount
+    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
+    router2 = shape.router
+    assert_equals(3, sys.getrefcount(router)) # router + router2 + refcount
+    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
+    del router
+    assert_equals(2, sys.getrefcount(router2)) # router + refcount
+    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
 
 def test_shaperef():
     router = Router()
