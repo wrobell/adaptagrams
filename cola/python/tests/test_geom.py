@@ -6,23 +6,6 @@ from nose.tools import *
 from libavoid import *
 
 
-def test_point():
-    p1 = Point(2, 4)
-
-    assert p1.x == 2
-    assert p1.y == 4
-
-    p1.id = 12
-    assert p1.id == 12
-
-    try:
-        p1.id = 'foo'
-        assert False
-    except TypeError:
-        pass
-    p2 = Point(2, 2)
-
-
 def test_polygon():
     poly = Polygon((0, 0), (4,0), (4, 4))
     assert_equals((0, 0), poly[0])

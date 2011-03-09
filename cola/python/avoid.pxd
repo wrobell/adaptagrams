@@ -136,5 +136,4 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         void moveJunction(JunctionRef*, double dx, double dy)
  
  
-
 # vim: sw=4:et:ai

@@ -19,4 +19,14 @@ To execute the test cases, use nose <..>:
 
   $ nosetests -v
 
+Using libavoid Python bindings
+------------------------------
+
+The bindings have been Pythonized to some extend. This should make it more
+intuitive for Python users to start using this library.
+
+Changes wrt the C++ implementation:
+
+* Point has been replaced by a tuple (x, y)
+
 
