@@ -32,7 +32,6 @@ cdef inline avoid.Polygon* new_polygon(points):
 
 cdef class Polygon:
     cdef avoid.Polygon *thisptr
-    cdef bint owner
 
     def __cinit__(self, *points):
         """
@@ -43,11 +42,9 @@ cdef class Polygon:
         <...>
         """
         self.thisptr = new_polygon(points)
-        self.owner = True
 
     def __dealloc__(self):
-        if self.owner:
-            del self.thisptr
+        del self.thisptr
 
     def __len__(self):
         return self.thisptr.ps.size()
