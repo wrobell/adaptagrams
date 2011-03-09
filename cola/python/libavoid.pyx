@@ -20,6 +20,7 @@ cdef unsigned int iid(object o):
 cdef class Polygon:
     cdef avoid.Polygon *thisptr
     cdef bint owner
+
     def __cinit__(self, *points):
         """
         Create a new polygon based on a set of points.
@@ -29,8 +30,8 @@ cdef class Polygon:
         <...>
         """
         self.thisptr = new avoid.Polygon(len(points))
-        for index, point in enumerate(points):
-            self.thisptr.ps[index] = avoid.Point(point[0], point[1])
+        for index, (x, y) in enumerate(points):
+            self.thisptr.ps[index] = avoid.Point(x, y)
         self.owner = True
 
     def __dealloc__(self):
@@ -40,18 +41,25 @@ cdef class Polygon:
     def __len__(self):
         return self.thisptr.ps.size()
 
-    def __getitem__(self, index):
-        return(self.thisptr.ps[index].x, self.thisptr.ps[index].y)
+    def __getitem__(self, long index):
+        return (self.thisptr.ps[index].x, self.thisptr.ps[index].y)
 
-    def __setitem__(self, index, point):
-        assert index < self.thisptr.ps.size()
-        self.thisptr.ps[index] = avoid.Point(point[0], point[1])
+    def __setitem__(self, long index, object point):
+        cdef double x, y
+        if index < 0:
+            index = self.thisptr.size() + index
+        assert 0 <= index < <long>self.thisptr.size()
+        x, y = point
+        self.thisptr.ps[index] = avoid.Point(x, y)
 
 
 cdef class Rectangle(Polygon):
     def __cinit__(self, object topLeft, object bottomRight):
-        self.thisptr = new avoid.Rectangle(avoid.Point(topLeft[0], topLeft[1]),
-                                      avoid.Point(bottomRight[0], bottomRight[1]))
+        cdef double tlx, tly, brx, bry
+        tlx, tly = topLeft
+        brx, bry = bottomRight
+        self.thisptr = new avoid.Rectangle(avoid.Point(tlx, tly),
+                                           avoid.Point(brx, bry))
         self.owner = True
 
 
@@ -90,6 +98,10 @@ cdef class Obstacle:
 
 
 cdef class ShapeRef(Obstacle):
+    """
+    A ShapeRef denotes some shape lines should be routed around.
+    """
+
     def __cinit__(object self, Router router, Polygon polygon):
         self.thisptr = new avoid.ShapeRef(router.thisptr, deref(polygon.thisptr), iid(self))
         self.owner = True
@@ -138,19 +150,37 @@ cdef class Router:
     ORTHOGONAL = avoid.OrthogonalRouting
 
     cdef avoid.Router *thisptr
+    cdef set _obstacles
+    cdef set _connrefs
+    cdef set _to_be_removed
 
     def __cinit__(self, router_flag=avoid.PolyLineRouting):
         self.thisptr = new avoid.Router(router_flag)
-        #_routers[id(self.thisptr)] = self
+        self._obstacles = set()
+        self._connrefs = set()
+        self._to_be_removed = set()
 
     def __dealloc__(self):
         del self.thisptr
 
     cdef object __weakref__
 
-    def addShape(self, object shape):
-        pass
-        #self.thisptr.addShape(<avoid.ShapeRef*>(shape.thisptr))
+    def processTransaction(self):
+        cdef bint result = self.thisptr.processTransaction()
+        cdef Obstacle o
+        for o in self._to_be_removed: o.owner = True
+        self._to_be_removed.clear()
+        return result
+
+    def addShape(self, ShapeRef shape):
+        self._obstacles.add(shape)
+        shape.owner = False
+        self.thisptr.addShape(<avoid.ShapeRef*>(shape.thisptr))
+
+    def removeShape(self, ShapeRef shape):
+        self.thisptr.removeShape(<avoid.ShapeRef*>(shape.thisptr))
+        self._obstacles.remove(shape)
+        self._to_be_removed.add(shape)
 
 
 

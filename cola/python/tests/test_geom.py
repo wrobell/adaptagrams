@@ -25,15 +25,21 @@ def test_polygon_has_fixed_size():
     poly = Polygon((0, 0), (4,0), (4, 4))
     poly[4] = (0, 0)
         
+@raises(ValueError)
+def test_polygon_can_only_take_pairs():
+    poly = Polygon((0, 0), (4,0), (4, 4))
+    poly[1] = (0, 0, 0)
 
 def test_rectangle():
     rect = Rectangle((0, 0), (3, 4))
     assert_equals((3, 4), rect[1])
     assert_equals((0, 0), rect[3])
 
+
 def test_connend():
     c = ConnEnd((2,4))
     assert_equals((2, 4), c.position)
+
 
 def test_router_instantiation():
     router = Router(Router.POLY_LINE)
@@ -42,7 +48,11 @@ def test_router_instantiation():
     del router
     assert_equals(None, w_router())
 
+
 def test_router_shape_refcount():
+    """
+    Test if reference counting goes well with router and shapes.
+    """
     router = Router()
     poly = Polygon((0, 0), (4, 0), (4, 4))
     shape = ShapeRef(router, poly)
@@ -63,5 +73,36 @@ def test_shaperef():
     assert_equals([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0)], shape.polygon)
     assert_equals(((0.0, 0.0), (4.0, 4.0)), shape.boundingBox)
     assert_true(router is shape.router)
+
+def test_router_and_shape():
+    router = Router()
+    poly = Polygon((0, 0), (4, 0), (4, 4))
+    shape = ShapeRef(router, poly)
+    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
+    router.addShape(shape)
+    assert_equals(3, sys.getrefcount(shape)) # shape + router + refcount
+    router.processTransaction()
+    router.removeShape(shape)
+    assert_equals(3, sys.getrefcount(shape)) # shape + router + refcount
+    router.processTransaction()
+    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
+    
+#def test_router_and_shape_delete_router():
+#    router = Router()
+#    poly = Polygon((0, 0), (4, 0), (4, 4))
+#    shape = ShapeRef(router, poly)
+#    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
+#    router.addShape(shape)
+#    assert_equals(3, sys.getrefcount(shape)) # shape + refcount
+#    #del router
+#    #assert_equals(2, sys.getrefcount(shape)) # shape + refcount
+    
+
+#def test_shaperef_add_to_different_router():
+#    router = Router()
+#    router2 = Router()
+#    poly = Polygon((0, 0), (4, 0), (4, 4))
+#    shape = ShapeRef(router, poly)
+#    router2.addShape(shape)
 
 # vim:sw=4:et:ai

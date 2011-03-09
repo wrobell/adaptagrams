@@ -2,7 +2,9 @@
 This module contains the C++ code wrappers.
 """
 
+from libc.stddef cimport size_t
 from libcpp import bool
+from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 
 ctypedef void (*conn_ref_cb)(void *ptr)
@@ -64,10 +66,11 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         int _id
         vector[Point] ps
         vector[char] ts
+        size_t size()
         # from PolygonInterface:
         void clear()
         bint empty()
-        Point& at(int index)
+        Point& at(size_t index)
         Polygon boundingRect()
 
         
@@ -114,8 +117,16 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         void setEndpoints(ConnEnd& srcPoint, ConnEnd& dstPoint)
         void setSourceEndpoint(ConnEnd& srcPoint)
         void setDestEndpoint(ConnEnd& dstPoint)
-        void setCallback(conn_ref_cb, void *ptr)
+        Router* router()
+        bint needsRepaint()
+        PolyLine& route()
         PolyLine& displayRoute()
+        void setCallback(conn_ref_cb, void *ptr)
+        ConnType routingType()
+        void setRoutingType(ConnType)
+        pair[JunctionRef, ConnRef] splitAtSegment(size_t segmentN)
+        void setRoutingCheckpoints(vector[Point]& checkpoints)
+        vector[Point] routingCheckpoints()
 
 
     cdef cppclass Router:
@@ -136,5 +147,6 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         void moveJunction(JunctionRef*, Point& newPosition)
         void moveJunction(JunctionRef*, double dx, double dy)
  
+
  
 # vim: sw=4:et:ai

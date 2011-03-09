@@ -8,20 +8,20 @@ sources = [
     'libavoid.pyx',
 ]
 
-examples = [
-    'test_multiconnact',
-    'test_example',
-]
-
-example_extensions = [Extension(
-    example,
-    sources=[example + '.pyx'],
-    language="c++",
-    include_dirs=['.', '..'],
-    #extra_link_args=[...],
-    library_dirs=['../libavoid/.libs'],
-    libraries=['avoid']
-    ) for example in examples]
+#examples = [
+#    'test_multiconnact',
+#    'test_example',
+#]
+#
+#example_extensions = [Extension(
+#    example,
+#    sources=[example + '.pyx'],
+#    language="c++",
+#    include_dirs=['.', '..'],
+#    #extra_link_args=[...],
+#    library_dirs=['../libavoid/.libs'],
+#    libraries=['avoid']
+#    ) for example in examples]
 
 
 setup(
@@ -46,7 +46,7 @@ setup(
         #extra_link_args=[...],
         library_dirs=['../libavoid/.libs'],
         libraries=['avoid']
-        )] + example_extensions,
+        )], # + example_extensions,
 
 #    zip_safe=False,
 
