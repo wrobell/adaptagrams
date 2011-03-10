@@ -68,7 +68,6 @@ cdef class Rectangle(Polygon):
         brx, bry = bottomRight
         self.thisptr = new avoid.Rectangle(avoid.Point(tlx, tly),
                                            avoid.Point(brx, bry))
-        self.owner = True
 
 
 cdef class Router
@@ -127,30 +126,93 @@ cdef class JunctionRef(Obstacle):
     """
 
     def __cinit__(object self, Router router, object position):
-        self.thisptr = new avoid.JunctionRef(router.thisptr, avoid.Point(position[0], position[1]), iid(self))
+        cdef double x, y
+        x, y = position
+        self.thisptr = new avoid.JunctionRef(router.thisptr, avoid.Point(x, y), iid(self))
         self.owner = True
         self._router_ref = PyWeakref_NewRef(router, None)
+
+    def removeJunctionAndMergeConnectors(self):
+        """
+        Remove function from router (if applicable) and merge the two
+        connectors into one.
+        """
+        cdef avoid.ConnRef *connRef = (<avoid.JunctionRef*>(self.thisptr)).removeJunctionAndMergeConnectors()
+        # TODO: find the connRef (from the router?) and return it.
 
 
 cdef class ConnEnd:
     cdef avoid.ConnEnd *thisptr
-    cdef bint owner
 
     def __cinit__(self, object point=None, object shape=None, object junction=None):
         if point:
             self.thisptr = new avoid.ConnEnd(avoid.Point(point[0], point[1]))
         #elif shape:
         #    self.thisptr = new avoid.ConnEnd(shape.thisptr)
-        self.owner = True
 
     def __dealloc__(self):
-        if self.owner:
-            del self.thisptr
+        del self.thisptr
 
     property position:
         def __get__(self):
             cdef avoid.Point p = self.thisptr.position()
             return (p.x, p.y)
+
+#cdef inline avoid.ConnEnd to_connend(object src, unsigned int connectionPinClassIdOrConnDirFlags):
+#    if isinstance(src, ShapeRef):
+#        return avoid.ConnEnd(<avoid.ShapeRef*>(<Obstacle>src).thisptr, connectionPinClassIdOrConnDirFlags)
+#    elif isinstance(src, JunctionRef):
+#        return avoid.ConnEnd(<avoid.JunctionRef*>(<Obstacle>src).thisptr)
+#    else:
+#        x, y = src
+#        return avoid.ConnEnd(avoid.Point(x, y), connectionPinClassIdOrConnDirFlags)
+
+ctypedef avoid.ShapeRef ShapeRefPtr
+
+cdef class ConnRef:
+    cdef avoid.ConnRef *thisptr
+    cdef object _router_ref
+    #cdef bint owner
+
+    def __cinit__(self, Router router, object src=None, object dst=None):
+        self.thisptr = new avoid.ConnRef(router.thisptr, iid(self))
+        self._router_ref = PyWeakref_NewRef(router, None)
+        if src:
+            self.setSourceEndpoint(src)
+        if dst:
+            self.setDestEndpoint(dst)
+
+    def __dealloc__(self):
+        # ConnRef is always owned by Router
+        #del self.thisptr
+        pass
+
+    def setSourceEndpoint(self, object src, unsigned int connectionPinClassIdOrConnDirFlags=avoid.ConnDirAll):
+        # connectionPinClassId == ConnDirFlags. Default is 15
+        #cdef avoid.ConnEnd end
+        if isinstance(src, ShapeRef):
+            self.thisptr.setSourceEndpoint(avoid.ConnEnd(<avoid.ShapeRef*>(<Obstacle>src).thisptr, connectionPinClassIdOrConnDirFlags))
+        elif isinstance(src, JunctionRef):
+            self.thisptr.setSourceEndpoint(avoid.ConnEnd(<avoid.JunctionRef*>(<Obstacle>src).thisptr))
+        else:
+            x, y = src
+            self.thisptr.setSourceEndpoint(avoid.ConnEnd(avoid.Point(x, y), connectionPinClassIdOrConnDirFlags))
+
+    def setDestEndpoint(self, object dst, unsigned int connectionPinClassIdOrConnDirFlags=avoid.ConnDirAll):
+        # connectionPinClassId == ConnDirFlags. Default is 15
+        #cdef avoid.ConnEnd end
+        if isinstance(dst, ShapeRef):
+            self.thisptr.setDestEndpoint(avoid.ConnEnd(<avoid.ShapeRef*>(<Obstacle>dst).thisptr, connectionPinClassIdOrConnDirFlags))
+        elif isinstance(dst, JunctionRef):
+            self.thisptr.setDestEndpoint(avoid.ConnEnd(<avoid.JunctionRef*>(<Obstacle>dst).thisptr))
+        else:
+            x, y = dst
+            self.thisptr.setDestEndpoint(avoid.ConnEnd(avoid.Point(x, y), connectionPinClassIdOrConnDirFlags))
+
+    property router:
+        def __get__(self):
+            return <object>PyWeakref_GetObject(self._router_ref)
+
 
 
 cdef class Router:
@@ -174,6 +236,9 @@ cdef class Router:
         del self.thisptr
 
     cdef object __weakref__
+
+    def setTransactionUse(self, bint useTransactions):
+        self.thisptr.setTransactionUse(useTransactions)
 
     def processTransaction(self):
         cdef bint result = self.thisptr.processTransaction()
@@ -202,5 +267,9 @@ cdef class Router:
     def moveShapeRel(self, ShapeRef shape, double dx, double dy):
         assert self is shape.router
         self.thisptr.moveShape(<avoid.ShapeRef*>shape.thisptr, dx, dy)
+
+    def outputInstanceToSVG(self, char* c_string): 
+        cdef avoid.std_string cpp_string = avoid.charp_to_stdstring(c_string) 
+        self.thisptr.outputInstanceToSVG(cpp_string) 
 
 # vim: sw=4:et:ai

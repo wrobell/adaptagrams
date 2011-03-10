@@ -127,5 +127,28 @@ def test_shaperef_move():
     router.removeShape(shape)
     router.processTransaction()
 
+#def test_connref_with_point():
+#    router = Router()
+#    conn = ConnRef(router)
+#    conn.setSourceEndpoint((2,3))
+#    conn.setDestEndpoint((10,10))
+
+def test_connref_with_point():
+    router = Router()
+    #router.setTransactionUse(False)
+    conn = ConnRef(router)
+    shape = ShapeRef(router, Polygon((2, 2), (6, 2), (4, 4)))
+    conn.setSourceEndpoint(shape)
+    
+    router.addShape(shape)
+    #router.processTransaction()
+
+def test_routing_with_output():
+    router = Router()
+    shape = ShapeRef(router, Rectangle((2, -2), (6, 2)))
+    router.addShape(shape)
+    conn = ConnRef(router, (0, 0), (20, 0))
+    router.processTransaction()
+    router.outputInstanceToSVG('test_routing_with_output')
 
 # vim:sw=4:et:ai

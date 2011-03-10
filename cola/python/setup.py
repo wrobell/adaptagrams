@@ -5,7 +5,7 @@ from distutils.extension import Extension
 from Cython.Distutils import build_ext
 
 sources = [
-    'libavoid.pyx',
+    'libavoid.pyx'
 ]
 
 #examples = [

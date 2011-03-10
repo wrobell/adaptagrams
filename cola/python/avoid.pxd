@@ -7,6 +7,23 @@ from libcpp import bool
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 
+#cdef extern from "<string>" namespace "std":
+#    cdef cppclass string:
+#        pass
+#     cdef string charp_to_stdstring "std::string"(char*) 
+
+cdef extern from "<string>":
+     cdef cppclass std_string "std::string": 
+         pass 
+     cdef std_string charp_to_stdstring "std::string"(char*) 
+#cdef extern from ???: 
+#     int getDevice_c(std::string) 
+#def getDevice(char* c_string): 
+#     cdef std_string cpp_string = charp_to_stdstring(c_string) 
+#     return getDevice_c(cpp_string) 
+
+
+
 ctypedef void (*conn_ref_cb)(void *ptr)
 
 cdef extern from "libavoid/libavoid.h" namespace "Avoid":
@@ -27,6 +44,8 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         ConnDirRight
         ConnDirAll
 
+    ctypedef unsigned int ConnDirFlags
+
     cdef enum PenaltyType:
         segmentPenalty
         anglePenalty
@@ -37,7 +56,7 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
 
 
     cdef cppclass Router
-
+    cdef cppclass ConnRef
 
     cdef cppclass Point:
         Point()
@@ -99,13 +118,14 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
 
     cdef cppclass JunctionRef(Obstacle):
         JunctionRef(Router *router, Point position, unsigned int id)
+        ConnRef *removeJunctionAndMergeConnectors()
 
 
     cdef cppclass ConnEnd:
         ConnEnd(Point&)
-        ConnEnd(Point&, ConnDirFlag)
-        #ConnEnd(ShapeRef&, unsigned int connectionPinClassID)
-        #ConnEnd(JunctionRef&)
+        ConnEnd(Point&, ConnDirFlags)
+        ConnEnd(ShapeRef*, unsigned int connectionPinClassID)
+        ConnEnd(JunctionRef*)
         Point position()
 
 
@@ -147,6 +167,9 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         void moveJunction(JunctionRef*, Point& newPosition)
         void moveJunction(JunctionRef*, double dx, double dy)
  
-
+        #ObstacleList m_obstacles;
+        #ConnRefList connRefs;
+        #ClusterRefList clusterRefs;
+        void outputInstanceToSVG(std_string)
  
 # vim: sw=4:et:ai
