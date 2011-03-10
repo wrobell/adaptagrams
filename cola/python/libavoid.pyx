@@ -167,11 +167,16 @@ cdef class ConnEnd:
 #        x, y = src
 #        return avoid.ConnEnd(avoid.Point(x, y), connectionPinClassIdOrConnDirFlags)
 
-ctypedef avoid.ShapeRef ShapeRefPtr
+cdef void _connref_callback(void *ptr):
+    cdef self = <object>ptr
+    if self._callback is None:
+        self._callback(self._callback_data)
 
 cdef class ConnRef:
     cdef avoid.ConnRef *thisptr
     cdef object _router_ref
+    cdef object _callback
+    cdef object _callback_data
     #cdef bint owner
 
     def __cinit__(self, Router router, object src=None, object dst=None):
@@ -181,6 +186,7 @@ cdef class ConnRef:
             self.setSourceEndpoint(src)
         if dst:
             self.setDestEndpoint(dst)
+        self._callback = None
 
     def __dealloc__(self):
         # ConnRef is always owned by Router
@@ -208,6 +214,15 @@ cdef class ConnRef:
         else:
             x, y = dst
             self.thisptr.setDestEndpoint(avoid.ConnEnd(avoid.Point(x, y), connectionPinClassIdOrConnDirFlags))
+
+    def setCallback(self, object callback, object data):
+        self._callback = callback
+        self._callback_data = data
+        if callback:
+            self.thisptr.setCallback(_connref_callback, <void*>self)
+        else:
+            # Unset callback
+            self.thisptr.setCallback(NULL, NULL)
 
     property router:
         def __get__(self):
