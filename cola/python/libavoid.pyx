@@ -259,11 +259,9 @@ cdef class Router:
         self._to_be_removed = set()
 
     def __dealloc__(self):
-        del self.thisptr
-
-    def __del__(self):
         # Clean up dangling updates
         self.processTransaction()
+        del self.thisptr
 
     cdef object __weakref__
 
@@ -273,6 +271,7 @@ cdef class Router:
     def processTransaction(self):
         cdef bint result = self.thisptr.processTransaction()
         cdef Obstacle o
+        #print 'Objects no longer owned by router:', self._to_be_removed
         for o in self._to_be_removed: o.owner = True
         self._to_be_removed.clear()
         return result
@@ -297,6 +296,29 @@ cdef class Router:
     def moveShapeRel(self, ShapeRef shape not None, double dx, double dy):
         assert self is shape.router
         self.thisptr.moveShape(<avoid.ShapeRef*>shape.thisptr, dx, dy)
+
+    def addJunction(self, JunctionRef junction not None):
+        assert self is junction.router
+        self._obstacles.add(junction)
+        junction.owner = False
+        self.thisptr.addJunction(<avoid.JunctionRef*>(junction.thisptr))
+
+    def removeJunction(self, JunctionRef junction not None):
+        assert self is junction.router
+        self.thisptr.removeJunction(<avoid.JunctionRef*>(junction.thisptr))
+        self._obstacles.remove(junction)
+        if self.thisptr.transactionUse():
+            self._to_be_removed.add(junction)
+
+    def moveJunction(self, JunctionRef junction not None, object point not None):
+        assert self is junction.router
+        cdef double x, y
+        x, y = point
+        self.thisptr.moveJunction(<avoid.JunctionRef*>junction.thisptr, avoid.Point(x, y))
+
+    def moveJunctionRel(self, JunctionRef junction not None, double dx, double dy):
+        assert self is junction.router
+        self.thisptr.moveJunction(<avoid.JunctionRef*>junction.thisptr, dx, dy)
 
     def outputInstanceToSVG(self, char* c_string): 
         cdef avoid.std_string cpp_string = avoid.charp_to_stdstring(c_string) 

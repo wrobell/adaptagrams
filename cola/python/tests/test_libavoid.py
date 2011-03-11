@@ -131,6 +131,35 @@ def test_shaperef_move():
     router.removeShape(shape)
     router.processTransaction()
 
+def test_junctionref_move():
+    router = Router()
+    junction = JunctionRef(router, (0, 0))
+    router.addJunction(junction)
+    router.processTransaction()
+    router.moveJunction(junction, (3, 4))
+    router.processTransaction()
+    assert_equals((3.0, 4.0), junction.position)
+
+    router.moveJunctionRel(junction, 1, 1)
+    router.processTransaction()
+    assert_equals((4.0, 5.0), junction.position)
+
+    router.removeJunction(junction)
+    router.processTransaction()
+
+def test_junctionref_move_stop_halfway():
+    router = Router()
+    junction = JunctionRef(router, (0, 0))
+    router.addJunction(junction)
+    router.processTransaction()
+    router.moveJunction(junction, (3, 4))
+    router.processTransaction()
+    assert_equals((3.0, 4.0), junction.position)
+
+    print 'Next line is of interest:'
+    router.removeJunction(junction)
+    #router.moveJunctionRel(junction, 1, 1)
+
 #def test_connref_with_point():
 #    router = Router()
 #    conn = ConnRef(router)

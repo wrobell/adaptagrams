@@ -7,21 +7,11 @@ from libcpp import bool
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 
-#cdef extern from "<string>" namespace "std":
-#    cdef cppclass string:
-#        pass
-#     cdef string charp_to_stdstring "std::string"(char*) 
 
 cdef extern from "<string>":
      cdef cppclass std_string "std::string": 
          pass 
      cdef std_string charp_to_stdstring "std::string"(char*) 
-#cdef extern from ???: 
-#     int getDevice_c(std::string) 
-#def getDevice(char* c_string): 
-#     cdef std_string cpp_string = charp_to_stdstring(c_string) 
-#     return getDevice_c(cpp_string) 
-
 
 
 ctypedef void (*conn_ref_cb)(void *ptr)
@@ -170,6 +160,7 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         #ObstacleList m_obstacles;
         #ConnRefList connRefs;
         #ClusterRefList clusterRefs;
+        bint objectIsInQueuedActionList(void*)
         void outputInstanceToSVG(std_string)
  
 # vim: sw=4:et:ai
