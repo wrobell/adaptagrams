@@ -50,6 +50,10 @@ def test_router_instantiation():
     del router
     assert_equals(None, w_router())
 
+@raises(TypeError)
+def test_router_add_None_shape():
+    router = Router()
+    router.addShape(None)
 
 def test_router_shape_refcount():
     """
@@ -150,5 +154,10 @@ def test_routing_with_output():
     conn = ConnRef(router, (0, 0), (20, 0))
     router.processTransaction()
     router.outputInstanceToSVG('test_routing_with_output')
+    #router.removeShape(shape)
+    #router.processTransaction()
+    #del conn
+    #del shape
+    #del router
 
 # vim:sw=4:et:ai

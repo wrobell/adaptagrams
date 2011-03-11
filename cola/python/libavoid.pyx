@@ -115,6 +115,7 @@ cdef class ShapeRef(Obstacle):
         self._router_ref = PyWeakref_NewRef(router, None)
 
     def __dealloc__(self):
+        # if self.router and self.thisptr in self.router.m_obstacles:
         if self.owner:
             del self.thisptr
 
@@ -131,6 +132,10 @@ cdef class JunctionRef(Obstacle):
         self.thisptr = new avoid.JunctionRef(router.thisptr, avoid.Point(x, y), iid(self))
         self.owner = True
         self._router_ref = PyWeakref_NewRef(router, None)
+
+    def __dealloc__(self):
+        if self.owner:
+            del self.thisptr
 
     def removeJunctionAndMergeConnectors(self):
         """
@@ -177,7 +182,7 @@ cdef class ConnRef:
     cdef object _router_ref
     cdef object _callback
     cdef object _callback_data
-    #cdef bint owner
+    cdef bint owner
 
     def __cinit__(self, Router router, object src=None, object dst=None):
         self.thisptr = new avoid.ConnRef(router.thisptr, iid(self))
@@ -187,26 +192,32 @@ cdef class ConnRef:
         if dst:
             self.setDestEndpoint(dst)
         self._callback = None
+        self._callback_data = None
 
     def __dealloc__(self):
         # ConnRef is always owned by Router
         #del self.thisptr
         pass
 
-    def setSourceEndpoint(self, object src, unsigned int connectionPinClassIdOrConnDirFlags=avoid.ConnDirAll):
+    def setSourceEndpoint(self, object src not None,
+            unsigned int connectionPinClassIdOrConnDirFlags=avoid.ConnDirAll):
         # connectionPinClassId == ConnDirFlags. Default is 15
-        #cdef avoid.ConnEnd end
         if isinstance(src, ShapeRef):
-            self.thisptr.setSourceEndpoint(avoid.ConnEnd(<avoid.ShapeRef*>(<Obstacle>src).thisptr, connectionPinClassIdOrConnDirFlags))
+            self.thisptr.setSourceEndpoint(
+                    avoid.ConnEnd(<avoid.ShapeRef*>(<Obstacle>src).thisptr,
+                                  connectionPinClassIdOrConnDirFlags))
         elif isinstance(src, JunctionRef):
-            self.thisptr.setSourceEndpoint(avoid.ConnEnd(<avoid.JunctionRef*>(<Obstacle>src).thisptr))
+            self.thisptr.setSourceEndpoint(
+                    avoid.ConnEnd(<avoid.JunctionRef*>(<Obstacle>src).thisptr))
         else:
             x, y = src
-            self.thisptr.setSourceEndpoint(avoid.ConnEnd(avoid.Point(x, y), connectionPinClassIdOrConnDirFlags))
+            self.thisptr.setSourceEndpoint(
+                    avoid.ConnEnd(avoid.Point(x, y),
+                                  connectionPinClassIdOrConnDirFlags))
 
-    def setDestEndpoint(self, object dst, unsigned int connectionPinClassIdOrConnDirFlags=avoid.ConnDirAll):
+    def setDestEndpoint(self, object dst not None,
+            unsigned int connectionPinClassIdOrConnDirFlags=avoid.ConnDirAll):
         # connectionPinClassId == ConnDirFlags. Default is 15
-        #cdef avoid.ConnEnd end
         if isinstance(dst, ShapeRef):
             self.thisptr.setDestEndpoint(avoid.ConnEnd(<avoid.ShapeRef*>(<Obstacle>dst).thisptr, connectionPinClassIdOrConnDirFlags))
         elif isinstance(dst, JunctionRef):
@@ -250,6 +261,10 @@ cdef class Router:
     def __dealloc__(self):
         del self.thisptr
 
+    def __del__(self):
+        # Clean up dangling updates
+        self.processTransaction()
+
     cdef object __weakref__
 
     def setTransactionUse(self, bint useTransactions):
@@ -262,24 +277,24 @@ cdef class Router:
         self._to_be_removed.clear()
         return result
 
-    def addShape(self, ShapeRef shape):
+    def addShape(self, ShapeRef shape not None):
         assert self is shape.router
         self._obstacles.add(shape)
         shape.owner = False
         self.thisptr.addShape(<avoid.ShapeRef*>(shape.thisptr))
 
-    def removeShape(self, ShapeRef shape):
+    def removeShape(self, ShapeRef shape not None):
         assert self is shape.router
         self.thisptr.removeShape(<avoid.ShapeRef*>(shape.thisptr))
         self._obstacles.remove(shape)
         if self.thisptr.transactionUse():
             self._to_be_removed.add(shape)
 
-    def moveShape(self, ShapeRef shape, Polygon polygon):
+    def moveShape(self, ShapeRef shape not None, Polygon polygon not None):
         assert self is shape.router
         self.thisptr.moveShape(<avoid.ShapeRef*>shape.thisptr, deref(polygon.thisptr))
 
-    def moveShapeRel(self, ShapeRef shape, double dx, double dy):
+    def moveShapeRel(self, ShapeRef shape not None, double dx, double dy):
         assert self is shape.router
         self.thisptr.moveShape(<avoid.ShapeRef*>shape.thisptr, dx, dy)
 
