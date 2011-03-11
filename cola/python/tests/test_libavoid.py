@@ -156,7 +156,6 @@ def test_junctionref_move_stop_halfway():
     router.processTransaction()
     assert_equals((3.0, 4.0), junction.position)
 
-    print 'Next line is of interest:'
     router.removeJunction(junction)
     #router.moveJunctionRel(junction, 1, 1)
 
@@ -188,5 +187,29 @@ def test_routing_with_output():
     #del conn
     #del shape
     #del router
+
+def test_connref_callback():
+    def callback(data):
+        data.append(True)
+
+    assert_equals(2, sys.getrefcount(callback))
+    router = Router()
+    shape = ShapeRef(router, Rectangle((2, -2), (6, 2)))
+    router.addShape(shape)
+    conn = ConnRef(router, (0, 0), (20, 0))
+    outlist = []
+    conn.setCallback(callback, outlist)
+    router.processTransaction()
+    assert_equals(1, len(outlist))
+    assert_equals(3, sys.getrefcount(callback))
+    router.moveShapeRel(shape, 1, 0)
+    router.processTransaction()
+    assert_equals(2, len(outlist))
+
+    conn.setCallback(None, None)
+    router.moveShapeRel(shape, -1, 0)
+    router.processTransaction()
+    assert_equals(2, len(outlist))
+    assert_equals(2, sys.getrefcount(callback))
 
 # vim:sw=4:et:ai

@@ -173,9 +173,8 @@ cdef class ConnEnd:
 #        return avoid.ConnEnd(avoid.Point(x, y), connectionPinClassIdOrConnDirFlags)
 
 cdef void _connref_callback(void *ptr):
-    cdef self = <object>ptr
-    if self._callback is None:
-        self._callback(self._callback_data)
+    cdef ConnRef self = <ConnRef>ptr
+    self._callback(self._callback_data)
 
 cdef class ConnRef:
     cdef avoid.ConnRef *thisptr
@@ -226,7 +225,7 @@ cdef class ConnRef:
             x, y = dst
             self.thisptr.setDestEndpoint(avoid.ConnEnd(avoid.Point(x, y), connectionPinClassIdOrConnDirFlags))
 
-    def setCallback(self, object callback, object data):
+    def setCallback(self, object callback, object data=None):
         self._callback = callback
         self._callback_data = data
         if callback:
