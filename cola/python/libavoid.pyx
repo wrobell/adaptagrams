@@ -6,6 +6,11 @@ from cpython.weakref cimport PyWeakref_NewRef, PyWeakref_GetObject, PyWeakref_Ch
 from cpython.ref cimport Py_INCREF
 
 
+DEBUG = False
+
+cdef inline void debug(char *msg, params):
+    if DEBUG: print msg % (params)
+
 cdef unsigned int iid(object o):
     return id(o) & 0xFFFFFFFF
 
@@ -29,6 +34,13 @@ cdef inline avoid.Polygon* new_polygon(points):
         polygon.ps[i] = avoid.Point(x, y)
     return polygon
 
+cdef inline object from_polygon(avoid.Polygon &polygon):
+        cdef unsigned int index
+        cdef object lst = []
+        for index from 0 <= index < polygon.ps.size():
+            lst.append((polygon.ps[index].x,
+                        polygon.ps[index].y))
+        return lst
 
 cdef class Polygon:
     cdef avoid.Polygon *thisptr
@@ -44,7 +56,9 @@ cdef class Polygon:
         self.thisptr = new_polygon(points)
 
     def __dealloc__(self):
+        debug('Polygon%s.__dealloc__()', self)
         del self.thisptr
+        debug('Polygon%s.__dealloc__() finished', self)
 
     def __len__(self):
         return self.thisptr.ps.size()
@@ -77,6 +91,7 @@ cdef class Obstacle:
     cdef avoid.Obstacle *thisptr
     cdef bint owner
     cdef object _router_ref
+    cdef object _owned_pins
 
     property position:
         def __get__(self):
@@ -85,13 +100,7 @@ cdef class Obstacle:
 
     property polygon:
         def __get__(self):
-            cdef avoid.Polygon polygon = self.thisptr.polygon()
-            cdef unsigned int index
-            cdef object lst = []
-            for index from 0 <= index < polygon.ps.size():
-                lst.append((polygon.ps[index].x,
-                            polygon.ps[index].y))
-            return lst
+            return from_polygon(<avoid.Polygon&>(self.thisptr.polygon()))
 
     property boundingBox:
         def __get__(self):
@@ -116,8 +125,10 @@ cdef class ShapeRef(Obstacle):
 
     def __dealloc__(self):
         # if self.router and self.thisptr in self.router.m_obstacles:
+        debug('ShapeRef%s.__dealloc__()', self)
         if self.owner:
             del self.thisptr
+        debug('ShapeRef%s.__dealloc__() done', self)
 
 
 cdef class JunctionRef(Obstacle):
@@ -134,8 +145,10 @@ cdef class JunctionRef(Obstacle):
         self._router_ref = PyWeakref_NewRef(router, None)
 
     def __dealloc__(self):
+        debug('JunctionRef%s.__dealloc__()', self)
         if self.owner:
             del self.thisptr
+        debug('JunctionRef%s.__dealloc__() done', self)
 
     def removeJunctionAndMergeConnectors(self):
         """
@@ -156,7 +169,9 @@ cdef class ConnEnd:
         #    self.thisptr = new avoid.ConnEnd(shape.thisptr)
 
     def __dealloc__(self):
+        debug('ConnEnd%s.__dealloc__()', self)
         del self.thisptr
+        debug('ConnEnd%s.__dealloc__() done', self)
 
     property position:
         def __get__(self):
@@ -174,14 +189,13 @@ cdef class ConnEnd:
 
 cdef void _connref_callback(void *ptr):
     cdef ConnRef self = <ConnRef>ptr
-    self._callback(self._callback_data)
+    self._callback[0](*self._callback[1])
 
 cdef class ConnRef:
     cdef avoid.ConnRef *thisptr
     cdef object _router_ref
     cdef object _callback
-    cdef object _callback_data
-    cdef bint owner
+    #cdef bint owner
 
     def __cinit__(self, Router router, object src=None, object dst=None):
         self.thisptr = new avoid.ConnRef(router.thisptr, iid(self))
@@ -190,13 +204,14 @@ cdef class ConnRef:
             self.setSourceEndpoint(src)
         if dst:
             self.setDestEndpoint(dst)
-        self._callback = None
-        self._callback_data = None
 
     def __dealloc__(self):
-        # ConnRef is always owned by Router
-        #del self.thisptr
-        pass
+#        # ConnRef is always owned by Router
+#        #del self.thisptr
+        debug('ConnRef%s.__dealloc__()', self)
+        self._router_ref = None
+        self._callback = None
+        debug('ConnRef%s.__dealloc__() done', self)
 
     def setSourceEndpoint(self, object src not None,
             unsigned int connectionPinClassIdOrConnDirFlags=avoid.ConnDirAll):
@@ -225,19 +240,22 @@ cdef class ConnRef:
             x, y = dst
             self.thisptr.setDestEndpoint(avoid.ConnEnd(avoid.Point(x, y), connectionPinClassIdOrConnDirFlags))
 
-    def setCallback(self, object callback, object data=None):
-        self._callback = callback
-        self._callback_data = data
+    def setCallback(self, object callback, *data):
         if callback:
+            self._callback = (callback, data)
             self.thisptr.setCallback(_connref_callback, <void*>self)
         else:
             # Unset callback
             self.thisptr.setCallback(NULL, NULL)
+            self._callback = None
 
     property router:
         def __get__(self):
             return <object>PyWeakref_GetObject(self._router_ref)
 
+    property displayRoute:
+        def __get__(self):
+            return from_polygon(self.thisptr.displayRoute())
 
 
 cdef class Router:
@@ -260,7 +278,17 @@ cdef class Router:
     def __dealloc__(self):
         # Clean up dangling updates
         self.processTransaction()
+        debug('Router%s.__dealloc__', self)
         del self.thisptr
+        self._obstacles = None
+        self._connrefs = None
+        self._to_be_removed = None
+        debug('Router%s.__dealloc__ finished', self)
+
+#    def __del__(self):
+#        # Gain some stability in knowing the router is always deleted first
+#        pass
+##        print 'Delete router', self
 
     cdef object __weakref__
 
