@@ -36,11 +36,11 @@ cdef inline avoid.Polygon* new_polygon(points):
 
 cdef inline object from_polygon(avoid.Polygon &polygon):
         cdef unsigned int index
-        cdef object lst = []
+        cdef object points = []
         for index from 0 <= index < polygon.ps.size():
-            lst.append((polygon.ps[index].x,
-                        polygon.ps[index].y))
-        return lst
+            points.append((polygon.ps[index].x,
+                           polygon.ps[index].y))
+        return points
 
 cdef class Polygon:
     cdef avoid.Polygon *thisptr
@@ -73,6 +73,24 @@ cdef class Polygon:
         assert 0 <= index < <long>self.thisptr.size()
         x, y = point
         self.thisptr.ps[index] = avoid.Point(x, y)
+
+    def __iter__(self):
+        return polygon_iter(self)
+        
+cdef class polygon_iter:
+    cdef Polygon polygon
+    cdef unsigned int index
+    def __init__(self, polygon):
+        self.polygon = polygon
+        self.index = 0
+
+    def next(self):
+        if self.index < len(self.polygon):
+            point = self.polygon[self.index]
+            self.index += 1
+        else:
+            raise StopIteration
+        return point
 
 
 cdef class Rectangle(Polygon):
@@ -189,7 +207,8 @@ cdef class ConnEnd:
 
 cdef void _connref_callback(void *ptr):
     cdef ConnRef self = <ConnRef>ptr
-    self._callback[0](*self._callback[1])
+    self._callback[0](*(self._callback[1]))
+
 
 cdef class ConnRef:
     cdef avoid.ConnRef *thisptr
@@ -276,13 +295,10 @@ cdef class Router:
         self._to_be_removed = set()
 
     def __dealloc__(self):
-        # Clean up dangling updates
-        self.processTransaction()
+        # Clean up dangling updates (not the Python one!)
+        self.thisptr.processTransaction()
         debug('Router%s.__dealloc__', self)
         del self.thisptr
-        self._obstacles = None
-        self._connrefs = None
-        self._to_be_removed = None
         debug('Router%s.__dealloc__ finished', self)
 
 #    def __del__(self):

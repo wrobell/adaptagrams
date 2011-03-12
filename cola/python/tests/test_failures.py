@@ -14,7 +14,7 @@ DEBUG = True
 def callback(data):
     data.append(True)
 
-@nottest
+#@nottest
 def test_connref_callback():
 
     assert_equals(2, sys.getrefcount(callback))
@@ -26,7 +26,7 @@ def test_connref_callback():
 #    assert_equals(2, sys.getrefcount(conn))
 
     # TODO: Here we can introduce circular references
-    conn.setCallback(callback, outlist, conn)
+    conn.setCallback(callback, outlist)
     router.processTransaction()
     assert_equals(1, len(outlist))
     assert_equals(3, sys.getrefcount(callback))
@@ -40,9 +40,9 @@ def test_connref_callback():
     assert_equals(2, len(outlist))
     assert_equals(2, sys.getrefcount(callback))
 
-    del router# , shape, conn, outlist
-    for i in range(10):
-        gc.collect()
+#    del router# , shape, conn, outlist
+#    for i in range(10):
+#        gc.collect()
 #    print '*** finished collect'
 #    del conn, shape
 #    gc.collect()

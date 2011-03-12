@@ -157,7 +157,6 @@ def test_junctionref_move_stop_halfway():
     assert_equals((3.0, 4.0), junction.position)
 
     router.removeJunction(junction)
-    #router.moveJunctionRel(junction, 1, 1)
 
 
 def test_connref_with_point():
@@ -179,6 +178,7 @@ def test_connref_with_shape():
     
     router.addShape(shape)
     #router.processTransaction()
+
 
 def test_routing_with_output():
     router = Router()
