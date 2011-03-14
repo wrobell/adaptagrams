@@ -38,11 +38,6 @@ def test_rectangle():
     assert_equals((0, 0), rect[3])
 
 
-def test_connend():
-    c = ConnEnd((2,4))
-    assert_equals((2, 4), c.position)
-
-
 def test_router_instantiation():
     router = Router(Router.POLY_LINE)
     assert_equals(2, sys.getrefcount(router)) # router + refcount

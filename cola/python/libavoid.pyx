@@ -137,6 +137,12 @@ cdef class ShapeRef(Obstacle):
     """
 
     def __cinit__(object self, Router router, Polygon polygon):
+        # TODO: allow rectangle=(tl, br) 
+        #if len(polygon) == 2:
+        #    create rectangle:
+        #else:
+        #    create polygon
+
         self.thisptr = new avoid.ShapeRef(router.thisptr, deref(polygon.thisptr), iid(self))
         self.owner = True
         self._router_ref = PyWeakref_NewRef(router, None)
@@ -176,34 +182,6 @@ cdef class JunctionRef(Obstacle):
         cdef avoid.ConnRef *connRef = (<avoid.JunctionRef*>(self.thisptr)).removeJunctionAndMergeConnectors()
         # TODO: find the connRef (from the router?) and return it.
 
-
-cdef class ConnEnd:
-    cdef avoid.ConnEnd *thisptr
-
-    def __cinit__(self, object point=None, object shape=None, object junction=None):
-        if point:
-            self.thisptr = new avoid.ConnEnd(avoid.Point(point[0], point[1]))
-        #elif shape:
-        #    self.thisptr = new avoid.ConnEnd(shape.thisptr)
-
-    def __dealloc__(self):
-        debug('ConnEnd%s.__dealloc__()', self)
-        del self.thisptr
-        debug('ConnEnd%s.__dealloc__() done', self)
-
-    property position:
-        def __get__(self):
-            cdef avoid.Point p = self.thisptr.position()
-            return (p.x, p.y)
-
-#cdef inline avoid.ConnEnd to_connend(object src, unsigned int connectionPinClassIdOrConnDirFlags):
-#    if isinstance(src, ShapeRef):
-#        return avoid.ConnEnd(<avoid.ShapeRef*>(<Obstacle>src).thisptr, connectionPinClassIdOrConnDirFlags)
-#    elif isinstance(src, JunctionRef):
-#        return avoid.ConnEnd(<avoid.JunctionRef*>(<Obstacle>src).thisptr)
-#    else:
-#        x, y = src
-#        return avoid.ConnEnd(avoid.Point(x, y), connectionPinClassIdOrConnDirFlags)
 
 cdef void _connref_callback(void *ptr):
     cdef ConnRef self = <ConnRef>ptr
