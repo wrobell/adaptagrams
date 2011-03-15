@@ -19,7 +19,7 @@ def test_connref_callback():
 
     assert_equals(2, sys.getrefcount(callback))
     router = Router()
-    shape = ShapeRef(router, Rectangle((2, -2), (6, 2)))
+    shape = ShapeRef(router, rectangle((2, -2), (6, 2)))
     router.addShape(shape)
     conn = ConnRef(router, (0, 0), (20, 0))
     outlist = []

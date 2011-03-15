@@ -22,17 +22,12 @@ cdef unsigned int iid(object o):
 # In the next case ownership is passed to the parent shapeRef/junctionRef
 #        Avoid::ShapeConnectionPin
 
-cdef inline avoid.Polygon* new_polygon(points):
-    """
-    Create a new Polygon instance. Caller is responsible for deleting it.
-    """
-    cdef avoid.Polygon *polygon
+cdef inline void to_polygon(object points, avoid.Polygon &polygon):
     cdef int i
     cdef double x, y
-    polygon = new avoid.Polygon(len(points))
     for i, (x, y) in enumerate(points):
         polygon.ps[i] = avoid.Point(x, y)
-    return polygon
+
 
 cdef inline object from_polygon(avoid.Polygon &polygon):
         cdef unsigned int index
@@ -42,64 +37,17 @@ cdef inline object from_polygon(avoid.Polygon &polygon):
                            polygon.ps[index].y))
         return points
 
-cdef class Polygon:
-    cdef avoid.Polygon *thisptr
 
-    def __cinit__(self, *points):
-        """
-        Create a new polygon based on a set of points.
+def rectangle(object topLeft, object bottomRight):
+    """Create a rectangular polygon.
+    """
+    cdef double xMin, xMax, yMin, yMax
+    xMin = min(topLeft[0], bottomRight[0])
+    xMax = max(topLeft[0], bottomRight[0])
+    yMin = min(topLeft[1], bottomRight[1])
+    yMax = max(topLeft[1], bottomRight[1])
 
-        >>> p = Polygon((0,0), (3, 0), (1.5, 2))
-        >>> p
-        <...>
-        """
-        self.thisptr = new_polygon(points)
-
-    def __dealloc__(self):
-        debug('Polygon%s.__dealloc__()', self)
-        del self.thisptr
-        debug('Polygon%s.__dealloc__() finished', self)
-
-    def __len__(self):
-        return self.thisptr.ps.size()
-
-    def __getitem__(self, long index):
-        return (self.thisptr.ps[index].x, self.thisptr.ps[index].y)
-
-    def __setitem__(self, long index, object point):
-        cdef double x, y
-        if index < 0:
-            index = self.thisptr.size() + index
-        assert 0 <= index < <long>self.thisptr.size()
-        x, y = point
-        self.thisptr.ps[index] = avoid.Point(x, y)
-
-    def __iter__(self):
-        return polygon_iter(self)
-        
-cdef class polygon_iter:
-    cdef Polygon polygon
-    cdef unsigned int index
-    def __init__(self, polygon):
-        self.polygon = polygon
-        self.index = 0
-
-    def next(self):
-        if self.index < len(self.polygon):
-            point = self.polygon[self.index]
-            self.index += 1
-        else:
-            raise StopIteration
-        return point
-
-
-cdef class Rectangle(Polygon):
-    def __cinit__(self, object topLeft, object bottomRight):
-        cdef double tlx, tly, brx, bry
-        tlx, tly = topLeft
-        brx, bry = bottomRight
-        self.thisptr = new avoid.Rectangle(avoid.Point(tlx, tly),
-                                           avoid.Point(brx, bry))
+    return ((xMax, yMin), (xMax, yMax), (xMin, yMax), (xMin, yMin))
 
 
 cdef class Router
@@ -135,15 +83,16 @@ cdef class ShapeRef(Obstacle):
     """
     A ShapeRef denotes some shape lines should be routed around.
     """
+    ATTACH_POS_TOP = 0
+    ATTACH_POS_LEFT = 0
+    ATTACH_POS_CENTRE = 0.5
+    ATTACH_POS_BOTTOM = 1
+    ATTACH_POS_RIGHT = 1
 
-    def __cinit__(object self, Router router, Polygon polygon):
-        # TODO: allow rectangle=(tl, br) 
-        #if len(polygon) == 2:
-        #    create rectangle:
-        #else:
-        #    create polygon
-
-        self.thisptr = new avoid.ShapeRef(router.thisptr, deref(polygon.thisptr), iid(self))
+    def __cinit__(object self, Router router, object points):
+        cdef avoid.Polygon polygon = avoid.Polygon(len(points))
+        to_polygon(points, polygon)
+        self.thisptr = new avoid.ShapeRef(router.thisptr, polygon, iid(self))
         self.owner = True
         self._router_ref = PyWeakref_NewRef(router, None)
 
@@ -154,6 +103,12 @@ cdef class ShapeRef(Obstacle):
             del self.thisptr
         debug('ShapeRef%s.__dealloc__() done', self)
 
+    def addConnectionPin(self, unsigned int classId,
+                double xPortionOffset, double yPortionOffset, 
+                double insideOffset = 0.0, unsigned int visDirs = 0):
+        assert self.router
+        avoid.ShapeConnectionPin(<avoid.ShapeRef*>self.thisptr, classId, xPortionOffset,
+            yPortionOffset, insideOffset, visDirs)
 
 cdef class JunctionRef(Obstacle):
     """
@@ -182,6 +137,10 @@ cdef class JunctionRef(Obstacle):
         cdef avoid.ConnRef *connRef = (<avoid.JunctionRef*>(self.thisptr)).removeJunctionAndMergeConnectors()
         # TODO: find the connRef (from the router?) and return it.
 
+    def addConnectionPin(self, unsigned int classId, unsigned int visDirs = 0):
+        assert self.router
+        avoid.ShapeConnectionPin(<avoid.JunctionRef*>self.thisptr, classId, visDirs)
+
 
 cdef void _connref_callback(void *ptr):
     cdef ConnRef self = <ConnRef>ptr
@@ -189,6 +148,11 @@ cdef void _connref_callback(void *ptr):
 
 
 cdef class ConnRef:
+    #
+    # NOTE:
+    # ConnRef is added to the router on creation time (contrary to ShapeRef and
+    # JunctionRef). To remove call Router.removeConn(connRef).
+    #
     cdef avoid.ConnRef *thisptr
     cdef object _router_ref
     cdef object _callback
@@ -213,6 +177,7 @@ cdef class ConnRef:
     def setSourceEndpoint(self, object src not None,
             unsigned int connectionPinClassIdOrConnDirFlags=avoid.ConnDirAll):
         # connectionPinClassId == ConnDirFlags. Default is 15
+        assert self.router
         if isinstance(src, ShapeRef):
             self.thisptr.setSourceEndpoint(
                     avoid.ConnEnd(<avoid.ShapeRef*>(<Obstacle>src).thisptr,
@@ -229,6 +194,7 @@ cdef class ConnRef:
     def setDestEndpoint(self, object dst not None,
             unsigned int connectionPinClassIdOrConnDirFlags=avoid.ConnDirAll):
         # connectionPinClassId == ConnDirFlags. Default is 15
+        assert self.router
         if isinstance(dst, ShapeRef):
             self.thisptr.setDestEndpoint(avoid.ConnEnd(<avoid.ShapeRef*>(<Obstacle>dst).thisptr, connectionPinClassIdOrConnDirFlags))
         elif isinstance(dst, JunctionRef):
@@ -238,6 +204,7 @@ cdef class ConnRef:
             self.thisptr.setDestEndpoint(avoid.ConnEnd(avoid.Point(x, y), connectionPinClassIdOrConnDirFlags))
 
     def setCallback(self, object callback, *data):
+        assert self.router
         if callback:
             self._callback = (callback, data)
             self.thisptr.setCallback(_connref_callback, <void*>self)
@@ -252,12 +219,13 @@ cdef class ConnRef:
 
     property displayRoute:
         def __get__(self):
+            assert self.router
             return from_polygon(self.thisptr.displayRoute())
 
 
 cdef class Router:
-    POLY_LINE = avoid.PolyLineRouting
-    ORTHOGONAL = avoid.OrthogonalRouting
+    POLY_LINE = 1
+    ORTHOGONAL = 2
 
     cdef avoid.Router *thisptr
     cdef set _obstacles
@@ -266,7 +234,8 @@ cdef class Router:
     # required. Hence we need to cache them before handing over control.
     cdef set _to_be_removed
 
-    def __cinit__(self, router_flag=avoid.PolyLineRouting):
+    def __cinit__(self, router_flag=1):
+        print 'router_flag:', router_flag
         self.thisptr = new avoid.Router(router_flag)
         self._obstacles = set()
         self._connrefs = set()
@@ -310,9 +279,11 @@ cdef class Router:
         if self.thisptr.transactionUse():
             self._to_be_removed.add(shape)
 
-    def moveShape(self, ShapeRef shape not None, Polygon polygon not None):
+    def moveShape(self, ShapeRef shape not None, object points not None):
         assert self is shape.router
-        self.thisptr.moveShape(<avoid.ShapeRef*>shape.thisptr, deref(polygon.thisptr))
+        cdef avoid.Polygon polygon = avoid.Polygon(len(points))
+        to_polygon(points, polygon)
+        self.thisptr.moveShape(<avoid.ShapeRef*>shape.thisptr, polygon)
 
     def moveShapeRel(self, ShapeRef shape not None, double dx, double dy):
         assert self is shape.router

@@ -8,32 +8,8 @@ from nose.tools import *
 from libavoid import *
 
 
-def test_polygon():
-    poly = Polygon((0, 0), (4,0), (4, 4))
-    assert_equals((0, 0), poly[0])
-    assert_equals((4, 0), poly[1])
-    assert_equals((4, 4), poly[2])
-    
-    poly[1] = (2, 3)
-    assert_equals((0, 0), poly[0])
-    assert_equals((2, 3), poly[1])
-    assert_equals((4, 4), poly[2])
-
-
-@raises(AssertionError)
-def test_polygon_has_fixed_size():
-    poly = Polygon((0, 0), (4,0), (4, 4))
-    poly[4] = (0, 0)
-        
-
-@raises(ValueError)
-def test_polygon_can_only_take_pairs():
-    poly = Polygon((0, 0), (4,0), (4, 4))
-    poly[1] = (0, 0, 0)
-
-
 def test_rectangle():
-    rect = Rectangle((0, 0), (3, 4))
+    rect = rectangle((0, 0), (3, 4))
     assert_equals((3, 4), rect[1])
     assert_equals((0, 0), rect[3])
 
@@ -55,7 +31,7 @@ def test_router_shape_refcount():
     Test if reference counting goes well with router and shapes.
     """
     router = Router()
-    poly = Polygon((0, 0), (4, 0), (4, 4))
+    poly = ((0, 0), (4, 0), (4, 4))
     shape = ShapeRef(router, poly)
     assert_equals(2, sys.getrefcount(router)) # router + refcount
     assert_equals(2, sys.getrefcount(shape)) # shape + refcount
@@ -68,7 +44,7 @@ def test_router_shape_refcount():
 
 def test_shaperef():
     router = Router()
-    poly = Polygon((0, 0), (4, 0), (4, 4))
+    poly = ((0, 0), (4, 0), (4, 4))
     shape = ShapeRef(router, poly)
     del poly
     assert_equals([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0)], shape.polygon)
@@ -77,7 +53,7 @@ def test_shaperef():
 
 def test_router_and_shape():
     router = Router()
-    poly = Polygon((0, 0), (4, 0), (4, 4))
+    poly = ((0, 0), (4, 0), (4, 4))
     shape = ShapeRef(router, poly)
     assert_equals(2, sys.getrefcount(shape)) # shape + refcount
     router.addShape(shape)
@@ -90,7 +66,7 @@ def test_router_and_shape():
     
 def test_router_and_shape_delete_router():
     router = Router()
-    poly = Polygon((0, 0), (4, 0), (4, 4))
+    poly = ((0, 0), (4, 0), (4, 4))
     shape = ShapeRef(router, poly)
     assert_equals(2, sys.getrefcount(shape)) # shape + refcount
     router.addShape(shape)
@@ -103,19 +79,19 @@ def test_router_and_shape_delete_router():
 def test_shaperef_add_to_different_router():
     router = Router()
     router2 = Router()
-    poly = Polygon((0, 0), (4, 0), (4, 4))
+    poly = ((0, 0), (4, 0), (4, 4))
     shape = ShapeRef(router, poly)
     router2.addShape(shape)
 
 
 def test_shaperef_move():
     router = Router()
-    poly = Polygon((0, 0), (4, 0), (4, 4))
+    poly = ((0, 0), (4, 0), (4, 4))
     shape = ShapeRef(router, poly)
     del poly
     router.addShape(shape)
     router.processTransaction()
-    router.moveShape(shape, Polygon((1,1), (5,1), (5,5)))
+    router.moveShape(shape, ((1,1), (5,1), (5,5)))
     router.processTransaction()
     assert_equals((1.0, 1.0), shape.polygon[0])
 
@@ -168,7 +144,7 @@ def test_connref_with_shape():
     router = Router()
     #router.setTransactionUse(False)
     conn = ConnRef(router)
-    shape = ShapeRef(router, Polygon((2, 2), (6, 2), (4, 4)))
+    shape = ShapeRef(router, ((2, 2), (6, 2), (4, 4)))
     conn.setSourceEndpoint(shape)
     
     router.addShape(shape)
@@ -177,7 +153,7 @@ def test_connref_with_shape():
 
 def test_routing_with_output():
     router = Router()
-    shape = ShapeRef(router, Rectangle((2, -2), (6, 2)))
+    shape = ShapeRef(router, rectangle((2, -2), (6, 2)))
     router.addShape(shape)
     conn = ConnRef(router, (0, 0), (20, 0))
     router.processTransaction()

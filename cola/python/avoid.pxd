@@ -3,7 +3,8 @@ This module contains the C++ code wrappers.
 """
 
 from libc.stddef cimport size_t
-from libcpp import bool
+#from libcpp import bool
+#from libcpp.list cimport list
 from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 
@@ -47,6 +48,8 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
 
     cdef cppclass Router
     cdef cppclass ConnRef
+
+    #typedef list[ConnRef*] ConnRefList
 
     cdef cppclass Point:
         Point()
@@ -109,6 +112,18 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
     cdef cppclass JunctionRef(Obstacle):
         JunctionRef(Router *router, Point position, unsigned int id)
         ConnRef *removeJunctionAndMergeConnectors()
+
+
+    cdef cppclass ShapeConnectionPin:
+        ShapeConnectionPin(ShapeRef* shape, unsigned int classId,
+                double xPortionOffset, double yPortionOffset, 
+                double insideOffset, ConnDirFlags visDirs)
+        ShapeConnectionPin(JunctionRef* junction, unsigned int classId,
+                ConnDirFlags visDirs)
+        void setConnectionCost(double cost)
+        Point position(Polygon& newPoly)
+        ConnDirFlags directions()
+        void setExclusive(bint exclusive)
 
 
     cdef cppclass ConnEnd:

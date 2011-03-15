@@ -15,7 +15,7 @@ def example_callback(connRef):
 def test_example():
     router = Router(Router.ORTHOGONAL)
 
-    shapePoly = Polygon((1, 1), (2.5, 1.5), (1.5, 2.5))
+    shapePoly = ((1, 1), (2.5, 1.5), (1.5, 2.5))
 
     shapeRef = ShapeRef(router, shapePoly)
 
