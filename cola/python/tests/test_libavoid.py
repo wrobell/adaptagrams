@@ -140,6 +140,16 @@ def test_connref_with_point():
     assert_equals([(2.0, 3.0), (10.0, 10.0)], route)
 
 
+def test_connref_with_point_orthogonal():
+    router = Router(Router.ORTHOGONAL)
+    conn = ConnRef(router)
+    conn.setSourceEndpoint((2,3))
+    conn.setDestEndpoint((10,10))
+    router.processTransaction()
+    route = conn.displayRoute
+    assert_equals([(2.0, 3.0), (10.0, 3.0), (10.0, 10.0)], route)
+
+
 def test_connref_with_shape():
     router = Router()
     #router.setTransactionUse(False)

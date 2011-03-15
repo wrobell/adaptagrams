@@ -224,8 +224,17 @@ cdef class ConnRef:
 
 
 cdef class Router:
-    POLY_LINE = 1
-    ORTHOGONAL = 2
+    # RoutingFlag
+    POLY_LINE = avoid.PolyLineRouting
+    ORTHOGONAL = avoid.OrthogonalRouting
+
+    # PenaltyType
+    SEGMENT_PENALTY = avoid.segmentPenalty
+    ANGLE_PENALTY = avoid.anglePenalty
+    CROSSING_PENALTY = avoid.crossingPenalty
+    CLUSTER_CROSSING_PENALTY = avoid.clusterCrossingPenalty
+    FIXED_SHARED_PATH_PENALTY = avoid.fixedSharedPathPenalty
+    PORT_DIRECTION_PENALTY = avoid.portDirectionPenalty
 
     cdef avoid.Router *thisptr
     cdef set _obstacles
@@ -234,14 +243,13 @@ cdef class Router:
     # required. Hence we need to cache them before handing over control.
     cdef set _to_be_removed
 
-    def __cinit__(self, router_flag=1):
-        print 'router_flag:', router_flag
-        self.thisptr = new avoid.Router(router_flag)
+    def __cinit__(Router self, unsigned int router_flag=avoid.PolyLineRouting):
+        self.thisptr = new avoid.Router(<avoid.RouterFlag>router_flag)
         self._obstacles = set()
         self._connrefs = set()
         self._to_be_removed = set()
 
-    def __dealloc__(self):
+    def __dealloc__(Router self):
         # Clean up dangling updates (not the Python one!)
         self.thisptr.processTransaction()
         debug('Router%s.__dealloc__', self)
@@ -255,10 +263,10 @@ cdef class Router:
 
     cdef object __weakref__
 
-    def setTransactionUse(self, bint useTransactions):
+    def setTransactionUse(Router self, bint useTransactions):
         self.thisptr.setTransactionUse(useTransactions)
 
-    def processTransaction(self):
+    def processTransaction(Router self):
         cdef bint result = self.thisptr.processTransaction()
         cdef Obstacle o
         #print 'Objects no longer owned by router:', self._to_be_removed
@@ -266,53 +274,59 @@ cdef class Router:
         self._to_be_removed.clear()
         return result
 
-    def addShape(self, ShapeRef shape not None):
+    def addShape(Router self, ShapeRef shape not None):
         assert self is shape.router
         self._obstacles.add(shape)
         shape.owner = False
         self.thisptr.addShape(<avoid.ShapeRef*>(shape.thisptr))
 
-    def removeShape(self, ShapeRef shape not None):
+    def removeShape(Router self, ShapeRef shape not None):
         assert self is shape.router
         self.thisptr.removeShape(<avoid.ShapeRef*>(shape.thisptr))
         self._obstacles.remove(shape)
         if self.thisptr.transactionUse():
             self._to_be_removed.add(shape)
 
-    def moveShape(self, ShapeRef shape not None, object points not None):
+    def moveShape(Router self, ShapeRef shape not None, object points not None):
         assert self is shape.router
         cdef avoid.Polygon polygon = avoid.Polygon(len(points))
         to_polygon(points, polygon)
         self.thisptr.moveShape(<avoid.ShapeRef*>shape.thisptr, polygon)
 
-    def moveShapeRel(self, ShapeRef shape not None, double dx, double dy):
+    def moveShapeRel(Router self, ShapeRef shape not None, double dx, double dy):
         assert self is shape.router
         self.thisptr.moveShape(<avoid.ShapeRef*>shape.thisptr, dx, dy)
 
-    def addJunction(self, JunctionRef junction not None):
+    def addJunction(Router self, JunctionRef junction not None):
         assert self is junction.router
         self._obstacles.add(junction)
         junction.owner = False
         self.thisptr.addJunction(<avoid.JunctionRef*>(junction.thisptr))
 
-    def removeJunction(self, JunctionRef junction not None):
+    def removeJunction(Router self, JunctionRef junction not None):
         assert self is junction.router
         self.thisptr.removeJunction(<avoid.JunctionRef*>(junction.thisptr))
         self._obstacles.remove(junction)
         if self.thisptr.transactionUse():
             self._to_be_removed.add(junction)
 
-    def moveJunction(self, JunctionRef junction not None, object point not None):
+    def moveJunction(Router self, JunctionRef junction not None, object point not None):
         assert self is junction.router
         cdef double x, y
         x, y = point
         self.thisptr.moveJunction(<avoid.JunctionRef*>junction.thisptr, avoid.Point(x, y))
 
-    def moveJunctionRel(self, JunctionRef junction not None, double dx, double dy):
+    def moveJunctionRel(Router self, JunctionRef junction not None, double dx, double dy):
         assert self is junction.router
         self.thisptr.moveJunction(<avoid.JunctionRef*>junction.thisptr, dx, dy)
 
-    def outputInstanceToSVG(self, char* c_string): 
+    def setRoutingPenalty(Router self, unsigned int penaltyType, double penVal):
+        self.thisptr.setRoutingPenalty(<avoid.PenaltyType>penaltyType, penVal)
+
+    def routingPenalty(Router self, unsigned int penaltyType):
+        return self.thisptr.routingPenalty(<avoid.PenaltyType>penaltyType)
+
+    def outputInstanceToSVG(Router self, char* c_string): 
         cdef avoid.std_string cpp_string = avoid.charp_to_stdstring(c_string) 
         self.thisptr.outputInstanceToSVG(cpp_string) 
 

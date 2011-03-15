@@ -24,8 +24,8 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         ConnType_Orthogonal
 
     cdef enum RouterFlag:
-        PolyLineRouting
-        OrthogonalRouting
+        PolyLineRouting = 1
+        OrthogonalRouting = 2
 
     cdef enum ConnDirFlag:
         ConnDirNone
@@ -159,6 +159,7 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         void setTransactionUse(bint)
         bint transactionUse()
         bint processTransaction()
+
         void setRoutingPenalty(PenaltyType, double penVal)
         double routingPenalty(PenaltyType)
         
