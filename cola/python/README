@@ -29,4 +29,20 @@ Changes wrt the C++ implementation:
 
 * Point has been replaced by a tuple (x, y)
 
+* Polygon is a simple list (or tuple) of points: ((0, 0), (4, 0), (4, 4))
+
+* A rectangle is represented as a polygon internally. For this the function
+  `rectangle()` helps creating one.
+
+* Adding ConnectionPins to ShapeRef and JunctionRef is done by invoking
+  addConnectionPin(...) on the shape/junction.
+
+* ShapeRef, JunctionRef and point can be assigned directly to ConnRef. no
+  ConnEnd needs to be created.
+
+* Router.moveShape(shape, dx, dy) is defined as
+  Router.moveShapeRel(shape, dx, dy). Same for Router.moveJunction(j, dx, dy).
+
+* To delete ConnRef instances, call Router.removeConn(connRef)
+  (the c++ way is to delete the connRef directly).
 
