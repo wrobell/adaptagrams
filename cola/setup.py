@@ -42,7 +42,7 @@ sources = [
 
 
 setup(
-    name='libavoid',
+    name='pylibavoid',
     version='0.1',
 
     author="Arjan J. Molenaar",
