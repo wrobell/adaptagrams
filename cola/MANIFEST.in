@@ -1,0 +1,10 @@
+# This file is ment for Python packaging.
+# Also python-libavoid.cpp is added as extra file. This file will be used
+# when Cython is not present.
+
+include NEWS
+include LICENSE
+include AUTHORS
+include COPYING
+recursive-include libavoid README LICENSE.LGPL python-libavoid.cpp *.h
+recursive-include python README *.py

@@ -1,11 +1,31 @@
+"""
+libavoid - Fast, Incremental, Object-avoiding Line Router
+"""
+
+__long_doc__ = """
+Libavoid is a cross-platform C++ library providing fast,
+object-avoiding connector routing for use in interactive
+diagram editors.
+"""
 
 from distutils.core import setup
-#from setuptools import setup #, find_packages
 from distutils.extension import Extension
-from Cython.Distutils import build_ext
 
-sources = [
-    'libavoid/python-libavoid.pyx',
+# Fallback, in case Cython is not installed.
+try:
+    from Cython.Distutils import build_ext
+    cmdclass = {'build_ext': build_ext}
+    python_sources = [
+        'libavoid/python-libavoid.pyx',
+    ]
+except ImportError:
+    cmdclass = None
+    python_sources = [
+        'libavoid/python-libavoid.cpp',
+    ]
+
+
+sources = python_sources + [
     'libavoid/connectionpin.cpp',
     'libavoid/connector.cpp',
     'libavoid/connend.cpp',
@@ -25,49 +45,23 @@ sources = [
     'libavoid/vpsc.cpp'
 ]
 
-#examples = [
-#    'test_multiconnact',
-#    'test_example',
-#]
-#
-#example_extensions = [Extension(
-#    example,
-#    sources=[example + '.pyx'],
-#    language="c++",
-#    include_dirs=['.', '..'],
-#    #extra_link_args=[...],
-#    library_dirs=['../libavoid/.libs'],
-#    libraries=['avoid']
-#    ) for example in examples]
-
-
 setup(
     name='pylibavoid',
     version='0.1',
-
-    author="Arjan J. Molenaar",
+    description=__doc__,
+    long_description=__long_doc__,
+    
+    author="Michael Wybrow, Arjan Molenaar",
     author_email='gaphor@gmail.com',
     
-#    setup_requires = [
-#     'nose >= 0.10.4',
-#     'setuptools-git >= 0.3.4'
-#    ],
-#
-#    test_suite = 'nose.collector',
-    
-    ext_modules = [Extension(
+    ext_modules=[Extension(
         "libavoid",
         sources=sources,
         language="c++",
         include_dirs=['.'],
-        #extra_link_args=[...],
-        #library_dirs=['../libavoid/.libs'],
-        #libraries=['avoid']
-        )], # + example_extensions,
+        )],
 
-#    zip_safe=False,
-
-    cmdclass = {'build_ext': build_ext}
+    cmdclass=cmdclass
 )
 
 # vim:sw=4:et:ai
