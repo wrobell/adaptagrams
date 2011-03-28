@@ -206,13 +206,25 @@ def test_connref_callback():
     assert_equals(2, len(outlist))
     assert_equals(2, sys.getrefcount(callback))
 
-#    del router# , shape, conn, outlist
-#    for i in range(10):
-#        gc.collect()
-#    print '*** finished collect'
-#    del conn, shape
-#    gc.collect()
-#
-#    del router
+
+def test_connref_delete():
+    router = Router()
+    conn = ConnRef(router, (0, 0), (20, 0))
+
+    router.processTransaction()
+    router.outputInstanceToSVG('test_connref_delete_1')
+
+    router.removeConn(conn)
+
+    router.processTransaction()
+    router.outputInstanceToSVG('test_connref_delete_2')
+
+    try:
+        conn.setSourceEndpoint((1, 1))
+    except AssertionError:
+        pass # ok
+    else:
+        assert 0, 'AssertionError should have been raised'
+
 
 # vim:sw=4:et:ai

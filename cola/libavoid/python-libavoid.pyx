@@ -215,7 +215,7 @@ cdef class ConnRef:
 
     property router:
         def __get__(self):
-            return <object>PyWeakref_GetObject(self._router_ref)
+            return self._router_ref and <object>PyWeakref_GetObject(self._router_ref)
 
     property displayRoute:
         def __get__(self):
@@ -319,6 +319,10 @@ cdef class Router:
     def moveJunctionRel(Router self, JunctionRef junction not None, double dx, double dy):
         assert self is junction.router
         self.thisptr.moveJunction(<avoid.JunctionRef*>junction.thisptr, dx, dy)
+
+    def removeConn(Router self, ConnRef conn not None):
+        conn._router_ref = None
+        del conn.thisptr
 
     def setRoutingPenalty(Router self, unsigned int penaltyType, double penVal):
         self.thisptr.setRoutingPenalty(<avoid.PenaltyType>penaltyType, penVal)
