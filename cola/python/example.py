@@ -25,10 +25,6 @@ def test_example():
     # Force inital callback:
     router.processTransaction()
 
-    print "Adding a shape."
-    router.addShape(shapeRef)
-    router.processTransaction()
-
     print "Shifting endpoint."
     connRef.setDestEndpoint((6, 4.5))
     # It's expected you know the connector needs rerouting, so the callback

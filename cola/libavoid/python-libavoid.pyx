@@ -14,7 +14,7 @@ cdef inline void debug(char *msg, params):
 cdef unsigned int iid(object o):
     return id(o) & 0xFFFFFFFF
 
-# The following classes lose ownership once passed to a Router:
+# The following classes are owned by the Router:
 #        Avoid::ShapeRef,
 #        Avoid::ConnRef,
 #        Avoid::ClusterRef,
@@ -55,28 +55,31 @@ cdef class Router
 
 cdef class Obstacle:
     cdef avoid.Obstacle *thisptr
-    cdef bint owner
     cdef object _router_ref
     cdef object _owned_pins
 
     property position:
         def __get__(self):
+            assert self.router
             cdef avoid.Point p = self.thisptr.position()
             return (p.x,p.y)
 
     property polygon:
         def __get__(self):
+            assert self.router
             return from_polygon(<avoid.Polygon&>(self.thisptr.polygon()))
 
     property boundingBox:
         def __get__(self):
+            assert self.router
             cdef avoid.BBox bbox
             self.thisptr.boundingBox(bbox)
             return ((bbox.a.x, bbox.a.y), (bbox.b.x, bbox.b.y))
 
     property router:
         def __get__(self):
-            return <object>PyWeakref_GetObject(self._router_ref)
+            assert self.thisptr, 'Backing instance has been deleted'
+            return self._router_ref and <object>PyWeakref_GetObject(self._router_ref)
 
 
 cdef class ShapeRef(Obstacle):
@@ -89,19 +92,12 @@ cdef class ShapeRef(Obstacle):
     ATTACH_POS_BOTTOM = 1
     ATTACH_POS_RIGHT = 1
 
-    def __cinit__(object self, Router router, object points):
+    def __cinit__(object self, Router router not None, object points not None):
         cdef avoid.Polygon polygon = avoid.Polygon(len(points))
         to_polygon(points, polygon)
         self.thisptr = new avoid.ShapeRef(router.thisptr, polygon, iid(self))
-        self.owner = True
         self._router_ref = PyWeakref_NewRef(router, None)
-
-    def __dealloc__(self):
-        # if self.router and self.thisptr in self.router.m_obstacles:
-        debug('ShapeRef%s.__dealloc__()', self)
-        if self.owner:
-            del self.thisptr
-        debug('ShapeRef%s.__dealloc__() done', self)
+        router._obstacles.add(self)
 
     def addConnectionPin(self, unsigned int classId,
                 double xPortionOffset, double yPortionOffset, 
@@ -110,30 +106,26 @@ cdef class ShapeRef(Obstacle):
         avoid.ShapeConnectionPin(<avoid.ShapeRef*>self.thisptr, classId, xPortionOffset,
             yPortionOffset, insideOffset, visDirs)
 
+
 cdef class JunctionRef(Obstacle):
     """
     A Junction denotes a point where one or more connection ends (ConnEnd)
     come together.
     """
 
-    def __cinit__(object self, Router router, object position):
+    def __cinit__(object self, Router router not None, object position not None):
         cdef double x, y
         x, y = position
         self.thisptr = new avoid.JunctionRef(router.thisptr, avoid.Point(x, y), iid(self))
-        self.owner = True
         self._router_ref = PyWeakref_NewRef(router, None)
-
-    def __dealloc__(self):
-        debug('JunctionRef%s.__dealloc__()', self)
-        if self.owner:
-            del self.thisptr
-        debug('JunctionRef%s.__dealloc__() done', self)
+        router._obstacles.add(self)
 
     def removeJunctionAndMergeConnectors(self):
         """
         Remove function from router (if applicable) and merge the two
         connectors into one.
         """
+        assert self.router
         cdef avoid.ConnRef *connRef = (<avoid.JunctionRef*>(self.thisptr)).removeJunctionAndMergeConnectors()
         # TODO: find the connRef (from the router?) and return it.
 
@@ -144,38 +136,26 @@ cdef class JunctionRef(Obstacle):
 
 cdef void _connref_callback(void *ptr):
     cdef ConnRef self = <ConnRef>ptr
-    try:
-        print 'Invoke callback', self._callback
-        self._callback[0](*(self._callback[1]))
-    except:
-        logging.error('Unable to invoke callback', exc_info=1)
+    if self and self._callback:
+        try:
+            debug('Invoke callback: %s', self._callback)
+            self._callback[0](*(self._callback[1]))
+        except:
+            logging.error('Error while invoking callback', exc_info=1)
 
 cdef class ConnRef:
-    #
-    # NOTE:
-    # ConnRef is added to the router on creation time (contrary to ShapeRef and
-    # JunctionRef). To remove call Router.removeConn(connRef).
-    #
     cdef avoid.ConnRef *thisptr
     cdef object _router_ref
     cdef object _callback
-    #cdef bint owner
 
-    def __cinit__(self, Router router, object src=None, object dst=None):
+    def __cinit__(self, Router router not None, object src=None, object dst=None):
         self.thisptr = new avoid.ConnRef(router.thisptr, iid(self))
         self._router_ref = PyWeakref_NewRef(router, None)
+        router._connectors.add(self)
         if src:
             self.setSourceEndpoint(src)
         if dst:
             self.setDestEndpoint(dst)
-
-    def __dealloc__(self):
-#        # ConnRef is always owned by Router
-#        #del self.thisptr
-        debug('ConnRef%s.__dealloc__()', self)
-        self._router_ref = None
-        self._callback = None
-        debug('ConnRef%s.__dealloc__() done', self)
 
     def setSourceEndpoint(self, object src not None,
             unsigned int connectionPinClassIdOrConnDirFlags=avoid.ConnDirAll):
@@ -199,12 +179,17 @@ cdef class ConnRef:
         # connectionPinClassId == ConnDirFlags. Default is 15
         assert self.router
         if isinstance(dst, ShapeRef):
-            self.thisptr.setDestEndpoint(avoid.ConnEnd(<avoid.ShapeRef*>(<Obstacle>dst).thisptr, connectionPinClassIdOrConnDirFlags))
+            self.thisptr.setDestEndpoint(
+                    avoid.ConnEnd(<avoid.ShapeRef*>(<Obstacle>dst).thisptr,
+                                  connectionPinClassIdOrConnDirFlags))
         elif isinstance(dst, JunctionRef):
-            self.thisptr.setDestEndpoint(avoid.ConnEnd(<avoid.JunctionRef*>(<Obstacle>dst).thisptr))
+            self.thisptr.setDestEndpoint(
+                    avoid.ConnEnd(<avoid.JunctionRef*>(<Obstacle>dst).thisptr))
         else:
             x, y = dst
-            self.thisptr.setDestEndpoint(avoid.ConnEnd(avoid.Point(x, y), connectionPinClassIdOrConnDirFlags))
+            self.thisptr.setDestEndpoint(
+                    avoid.ConnEnd(avoid.Point(x, y),
+                                  connectionPinClassIdOrConnDirFlags))
 
     def setCallback(self, object callback, *data):
         assert self.router
@@ -218,6 +203,7 @@ cdef class ConnRef:
 
     property router:
         def __get__(self):
+            assert self.thisptr, 'Backing instance has been deleted'
             return self._router_ref and <object>PyWeakref_GetObject(self._router_ref)
 
     property displayRoute:
@@ -241,16 +227,12 @@ cdef class Router:
 
     cdef avoid.Router *thisptr
     cdef set _obstacles
-    cdef set _connrefs
-    # Obstacles are not removed directly. First a processTransaction() is
-    # required. Hence we need to cache them before handing over control.
-    cdef set _to_be_removed
+    cdef set _connectors
 
     def __cinit__(Router self, unsigned int router_flag=avoid.PolyLineRouting):
         self.thisptr = new avoid.Router(<avoid.RouterFlag>router_flag)
         self._obstacles = set()
-        self._connrefs = set()
-        self._to_be_removed = set()
+        self._connectors = set()
 
     def __dealloc__(Router self):
         # Clean up dangling updates (not the Python one!)
@@ -259,36 +241,13 @@ cdef class Router:
         del self.thisptr
         debug('Router%s.__dealloc__ finished', self)
 
-#    def __del__(self):
-#        # Gain some stability in knowing the router is always deleted first
-#        pass
-##        print 'Delete router', self
-
     cdef object __weakref__
 
     def setTransactionUse(Router self, bint useTransactions):
         self.thisptr.setTransactionUse(useTransactions)
 
     def processTransaction(Router self):
-        cdef bint result = self.thisptr.processTransaction()
-        cdef Obstacle o
-        #print 'Objects no longer owned by router:', self._to_be_removed
-        for o in self._to_be_removed: o.owner = True
-        self._to_be_removed.clear()
-        return result
-
-    def addShape(Router self, ShapeRef shape not None):
-        assert self is shape.router
-        self._obstacles.add(shape)
-        shape.owner = False
-        self.thisptr.addShape(<avoid.ShapeRef*>(shape.thisptr))
-
-    def removeShape(Router self, ShapeRef shape not None):
-        assert self is shape.router
-        self.thisptr.removeShape(<avoid.ShapeRef*>(shape.thisptr))
-        self._obstacles.remove(shape)
-        if self.thisptr.transactionUse():
-            self._to_be_removed.add(shape)
+        return self.thisptr.processTransaction()
 
     def moveShape(Router self, ShapeRef shape not None, object points not None):
         assert self is shape.router
@@ -300,18 +259,12 @@ cdef class Router:
         assert self is shape.router
         self.thisptr.moveShape(<avoid.ShapeRef*>shape.thisptr, dx, dy)
 
-    def addJunction(Router self, JunctionRef junction not None):
-        assert self is junction.router
-        self._obstacles.add(junction)
-        junction.owner = False
-        self.thisptr.addJunction(<avoid.JunctionRef*>(junction.thisptr))
-
-    def removeJunction(Router self, JunctionRef junction not None):
-        assert self is junction.router
-        self.thisptr.removeJunction(<avoid.JunctionRef*>(junction.thisptr))
-        self._obstacles.remove(junction)
-        if self.thisptr.transactionUse():
-            self._to_be_removed.add(junction)
+    def deleteShape(Router self, ShapeRef shape not None):
+        assert self is shape.router
+        assert shape in self._obstacles, 'Shape not owned by Router'
+        self.thisptr.deleteShape(<avoid.ShapeRef*>(shape.thisptr))
+        self._obstacles.remove(shape)
+        shape.thisptr = NULL
 
     def moveJunction(Router self, JunctionRef junction not None, object point not None):
         assert self is junction.router
@@ -323,9 +276,19 @@ cdef class Router:
         assert self is junction.router
         self.thisptr.moveJunction(<avoid.JunctionRef*>junction.thisptr, dx, dy)
 
-    def removeConn(Router self, ConnRef conn not None):
-        conn._router_ref = None
-        del conn.thisptr
+    def deleteJunction(Router self, JunctionRef junction not None):
+        assert self is junction.router
+        assert junction in self._obstacles, 'Junction not owned by Router'
+        self.thisptr.deleteJunction(<avoid.JunctionRef*>(junction.thisptr))
+        self._obstacles.remove(junction)
+        junction.thisptr = NULL
+
+    def deleteConnector(Router self, ConnRef conn not None):
+        assert self is conn.router
+        assert conn in self._connectors, 'Connector not owned by Router'
+        self.thisptr.deleteConnector(<avoid.ConnRef*>(conn.thisptr))
+        self._connectors.remove(conn)
+        conn.thisptr = NULL
 
     def setRoutingPenalty(Router self, unsigned int penaltyType, double penVal):
         self.thisptr.setRoutingPenalty(<avoid.PenaltyType>penaltyType, penVal)
@@ -336,5 +299,14 @@ cdef class Router:
     def outputInstanceToSVG(Router self, char* c_string): 
         cdef avoid.std_string cpp_string = avoid.charp_to_stdstring(c_string) 
         self.thisptr.outputInstanceToSVG(cpp_string) 
+
+    property obstacles:
+        def __get__(self):
+            return frozenset(self._obstacles)
+
+    property connectors:
+        def __get__(self):
+            return frozenset(self._connectors)
+
 
 # vim: sw=4:et:ai

@@ -163,16 +163,16 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         void setRoutingPenalty(PenaltyType, double penVal)
         double routingPenalty(PenaltyType)
         
-        void addShape(ShapeRef*)
-        void removeShape(ShapeRef*)
         void moveShape(ShapeRef*, Polygon&)
         void moveShape(ShapeRef*, double dx, double dy)
+        void deleteShape(ShapeRef*)
 
-        void addJunction(JunctionRef*)
-        void removeJunction(JunctionRef*)
         void moveJunction(JunctionRef*, Point& newPosition)
         void moveJunction(JunctionRef*, double dx, double dy)
+        void deleteJunction(JunctionRef*)
  
+        void deleteConnector(ConnRef*)
+
         #ObstacleList m_obstacles;
         #ConnRefList connRefs;
         #ClusterRefList clusterRefs;

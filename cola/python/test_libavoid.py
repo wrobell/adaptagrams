@@ -21,11 +21,6 @@ def test_router_instantiation():
     del router
     assert_equals(None, w_router())
 
-@raises(TypeError)
-def test_router_add_None_shape():
-    router = Router()
-    router.addShape(None)
-
 def test_router_shape_refcount():
     """
     Test if reference counting goes well with router and shapes.
@@ -34,13 +29,13 @@ def test_router_shape_refcount():
     poly = ((0, 0), (4, 0), (4, 4))
     shape = ShapeRef(router, poly)
     assert_equals(2, sys.getrefcount(router)) # router + refcount
-    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
+    assert_equals(3, sys.getrefcount(shape)) # shape + router + refcount
     router2 = shape.router
     assert_equals(3, sys.getrefcount(router)) # router + router2 + refcount
-    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
+    assert_equals(3, sys.getrefcount(shape)) # shape + refcount
     del router
     assert_equals(2, sys.getrefcount(router2)) # router + refcount
-    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
+    assert_equals(3, sys.getrefcount(shape)) # shape + router2 + refcount
 
 def test_shaperef():
     router = Router()
@@ -55,12 +50,11 @@ def test_router_and_shape():
     router = Router()
     poly = ((0, 0), (4, 0), (4, 4))
     shape = ShapeRef(router, poly)
-    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
-    router.addShape(shape)
     assert_equals(3, sys.getrefcount(shape)) # shape + router + refcount
     router.processTransaction()
-    router.removeShape(shape)
-    assert_equals(3, sys.getrefcount(shape)) # shape + router + refcount
+    assert_true(shape in router.obstacles)
+    router.deleteShape(shape)
+    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
     router.processTransaction()
     assert_equals(2, sys.getrefcount(shape)) # shape + refcount
     
@@ -68,28 +62,34 @@ def test_router_and_shape_delete_router():
     router = Router()
     poly = ((0, 0), (4, 0), (4, 4))
     shape = ShapeRef(router, poly)
-    assert_equals(2, sys.getrefcount(shape)) # shape + refcount
-    router.addShape(shape)
-    assert_equals(3, sys.getrefcount(shape)) # shape + refcount
+    assert_true(shape in router.obstacles)
+    assert_equals(3, sys.getrefcount(shape)) # shape + router + refcount
     del router
     assert_equals(2, sys.getrefcount(shape)) # shape + refcount
     
 
 @raises(AssertionError)
-def test_shaperef_add_to_different_router():
+def test_shaperef_move_on_different_router():
     router = Router()
     router2 = Router()
     poly = ((0, 0), (4, 0), (4, 4))
     shape = ShapeRef(router, poly)
-    router2.addShape(shape)
+    router2.moveShapeRel(shape, 1, 1)
 
+@raises(AssertionError)
+def test_shaperef_methodcall_after_deletion():
+    router = Router()
+    poly = ((0, 0), (4, 0), (4, 4))
+    shape = ShapeRef(router, poly)
+    router.processTransaction()
+    router.deleteShape(shape)
+    shape.router
 
 def test_shaperef_move():
     router = Router()
     poly = ((0, 0), (4, 0), (4, 4))
     shape = ShapeRef(router, poly)
     del poly
-    router.addShape(shape)
     router.processTransaction()
     router.moveShape(shape, ((1,1), (5,1), (5,5)))
     router.processTransaction()
@@ -99,13 +99,12 @@ def test_shaperef_move():
     router.processTransaction()
     assert_equals((2.0, 2.0), shape.polygon[0])
 
-    router.removeShape(shape)
+    router.deleteShape(shape)
     router.processTransaction()
 
 def test_junctionref_move():
     router = Router()
     junction = JunctionRef(router, (0, 0))
-    router.addJunction(junction)
     router.processTransaction()
     router.moveJunction(junction, (3, 4))
     router.processTransaction()
@@ -115,19 +114,18 @@ def test_junctionref_move():
     router.processTransaction()
     assert_equals((4.0, 5.0), junction.position)
 
-    router.removeJunction(junction)
+    router.deleteJunction(junction)
     router.processTransaction()
 
 def test_junctionref_move_stop_halfway():
     router = Router()
     junction = JunctionRef(router, (0, 0))
-    router.addJunction(junction)
     router.processTransaction()
     router.moveJunction(junction, (3, 4))
     router.processTransaction()
     assert_equals((3.0, 4.0), junction.position)
 
-    router.removeJunction(junction)
+    router.deleteJunction(junction)
 
 
 def test_connref_with_point():
@@ -157,14 +155,12 @@ def test_connref_with_shape():
     shape = ShapeRef(router, ((2, 2), (6, 2), (4, 4)))
     conn.setSourceEndpoint(shape)
     
-    router.addShape(shape)
     #router.processTransaction()
 
 
 def test_routing_with_output():
     router = Router()
     shape = ShapeRef(router, rectangle((2, -2), (6, 2)))
-    router.addShape(shape)
     conn = ConnRef(router, (0, 0), (20, 0))
     router.processTransaction()
     router.outputInstanceToSVG('test_routing_with_output')
@@ -180,13 +176,11 @@ def test_routing_with_output():
 def callback(data):
     data.append(True)
 
-#@nottest
 def test_connref_callback():
 
     assert_equals(2, sys.getrefcount(callback))
     router = Router()
     shape = ShapeRef(router, rectangle((2, -2), (6, 2)))
-    router.addShape(shape)
     conn = ConnRef(router, (0, 0), (20, 0))
     outlist = []
 #    assert_equals(2, sys.getrefcount(conn))
@@ -214,7 +208,7 @@ def test_connref_delete():
     router.processTransaction()
     router.outputInstanceToSVG('test_connref_delete_1')
 
-    router.removeConn(conn)
+    router.deleteConnector(conn)
 
     router.processTransaction()
     router.outputInstanceToSVG('test_connref_delete_2')

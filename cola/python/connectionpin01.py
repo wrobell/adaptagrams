@@ -28,11 +28,9 @@ def test_connectionpin01():
     # Create the ShapeRef:
     shapeRect1 = rectangle((0, 0), (10, 10))
     shapeRef1 = ShapeRef(router, shapeRect1)
-    router.addShape(shapeRef1)
     
     shapeRect2 = rectangle((40, 20), (50, 30))
     shapeRef2 = ShapeRef(router, shapeRect2)
-    router.addShape(shapeRef2)
 
     CENTRE = 1
     #ShapeConnectionPin(shapeRef1, CENTRE, ShapeConnectionPin.ATTACH_POS_CENTRE, 
