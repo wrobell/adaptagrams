@@ -4,7 +4,7 @@ cimport avoid
 
 from cpython.weakref cimport PyWeakref_NewRef, PyWeakref_GetObject, PyWeakref_CheckRef
 from cpython.ref cimport Py_INCREF
-
+import logging
 
 DEBUG = False
 
@@ -144,8 +144,11 @@ cdef class JunctionRef(Obstacle):
 
 cdef void _connref_callback(void *ptr):
     cdef ConnRef self = <ConnRef>ptr
-    self._callback[0](*(self._callback[1]))
-
+    try:
+        print 'Invoke callback', self._callback
+        self._callback[0](*(self._callback[1]))
+    except:
+        logging.error('Unable to invoke callback', exc_info=1)
 
 cdef class ConnRef:
     #
