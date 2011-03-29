@@ -50,10 +50,23 @@ setup(
     version='0.1',
     description=__doc__,
     long_description=__long_doc__,
+    url='http://github.com/amolenaar/adaptagrams/tree/cython',
     
-    author="Michael Wybrow, Arjan Molenaar",
+    author="Tim Dwyer, Michael Wybrow, Arjan Molenaar (Python bindings)",
     author_email='gaphor@gmail.com',
     
+    classifiers = [
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: Microsoft :: Windows',
+        'Operating System :: POSIX',
+        'Programming Language :: Python',
+        'Programming Language :: C++',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+    ],
+
     ext_modules=[Extension(
         "libavoid",
         sources=sources,
