@@ -9,9 +9,16 @@ from libcpp.pair cimport pair
 from libcpp.vector cimport vector
 
 
+cdef extern from "libavoid/python-libavoid.h":
+    cdef void LibavoidExn2PyErr()
+
+cdef inline void critical_failure():
+    LibavoidExn2PyErr()
+
+
 cdef extern from "<string>":
      cdef cppclass std_string "std::string": 
-         pass 
+         pass
      cdef std_string charp_to_stdstring "std::string"(char*) 
 
 
@@ -103,15 +110,15 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
 
 
     cdef cppclass ShapeRef(Obstacle):
-        ShapeRef(Router *router, Polygon &poly, unsigned int id)
+        ShapeRef(Router *router, Polygon &poly, unsigned int id) except +critical_failure
         #ShapeRef(Router *router, Polygon &poly)
         #void transformConnectionPinPositions(ShapeTransformationType transform)
         #ConnRefList attachedConnectors(void)
 
 
     cdef cppclass JunctionRef(Obstacle):
-        JunctionRef(Router *router, Point position, unsigned int id)
-        ConnRef *removeJunctionAndMergeConnectors()
+        JunctionRef(Router *router, Point position, unsigned int id) except +critical_failure
+        ConnRef *removeJunctionAndMergeConnectors() except +critical_failure
 
 
     cdef cppclass ShapeConnectionPin:
@@ -135,13 +142,13 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
 
 
     cdef cppclass ConnRef:
-        ConnRef(Router *router, unsigned int id)
-        ConnRef(Router *router, ConnEnd& src, ConnEnd& dst, unsigned int id)
-        ConnRef(Router *router, ConnEnd& src, ConnEnd& dst)
+        ConnRef(Router *router, unsigned int id) except +critical_failure
+        ConnRef(Router *router, ConnEnd& src, ConnEnd& dst, unsigned int id) except +critical_failure
+        ConnRef(Router *router, ConnEnd& src, ConnEnd& dst) except +critical_failure
         unsigned int id()
-        void setEndpoints(ConnEnd& srcPoint, ConnEnd& dstPoint)
-        void setSourceEndpoint(ConnEnd& srcPoint)
-        void setDestEndpoint(ConnEnd& dstPoint)
+        void setEndpoints(ConnEnd& srcPoint, ConnEnd& dstPoint) except +critical_failure
+        void setSourceEndpoint(ConnEnd& srcPoint) except +critical_failure
+        void setDestEndpoint(ConnEnd& dstPoint) except +critical_failure
         Router* router()
         bint needsRepaint()
         PolyLine& route()
@@ -149,34 +156,35 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         void setCallback(conn_ref_cb, void *ptr)
         ConnType routingType()
         void setRoutingType(ConnType)
-        pair[JunctionRef, ConnRef] splitAtSegment(size_t segmentN)
+        pair[JunctionRef, ConnRef] splitAtSegment(size_t segmentN) except +critical_failure
         void setRoutingCheckpoints(vector[Point]& checkpoints)
         vector[Point] routingCheckpoints()
 
 
     cdef cppclass Router:
-        Router(RouterFlag)
+        Router(RouterFlag) except +critical_failure
+        #~Router() except +
         void setTransactionUse(bint)
         bint transactionUse()
-        bint processTransaction()
+        bint processTransaction() except +critical_failure
 
-        void setRoutingPenalty(PenaltyType, double penVal)
-        double routingPenalty(PenaltyType)
+        void setRoutingPenalty(PenaltyType, double penVal) except +critical_failure
+        double routingPenalty(PenaltyType) except +critical_failure
         
-        void moveShape(ShapeRef*, Polygon&)
-        void moveShape(ShapeRef*, double dx, double dy)
-        void deleteShape(ShapeRef*)
+        void moveShape(ShapeRef*, Polygon&) except +critical_failure
+        void moveShape(ShapeRef*, double dx, double dy) except +critical_failure
+        void deleteShape(ShapeRef*) except +critical_failure
 
-        void moveJunction(JunctionRef*, Point& newPosition)
-        void moveJunction(JunctionRef*, double dx, double dy)
-        void deleteJunction(JunctionRef*)
+        void moveJunction(JunctionRef*, Point& newPosition) except +critical_failure
+        void moveJunction(JunctionRef*, double dx, double dy) except +critical_failure
+        void deleteJunction(JunctionRef*) except +critical_failure
  
-        void deleteConnector(ConnRef*)
+        void deleteConnector(ConnRef*) except +critical_failure
 
         #ObstacleList m_obstacles;
         #ConnRefList connRefs;
         #ClusterRefList clusterRefs;
         bint objectIsInQueuedActionList(void*)
-        void outputInstanceToSVG(std_string)
+        void outputInstanceToSVG(std_string) except +critical_failure
  
 # vim: sw=4:et:ai

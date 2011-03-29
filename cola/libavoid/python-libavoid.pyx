@@ -103,8 +103,9 @@ cdef class ShapeRef(Obstacle):
                 double xPortionOffset, double yPortionOffset, 
                 double insideOffset = 0.0, unsigned int visDirs = 0):
         assert self.router
-        avoid.ShapeConnectionPin(<avoid.ShapeRef*>self.thisptr, classId, xPortionOffset,
-            yPortionOffset, insideOffset, visDirs)
+        avoid.ShapeConnectionPin(<avoid.ShapeRef*>self.thisptr, classId,
+                                 xPortionOffset, yPortionOffset,
+                                 insideOffset, visDirs)
 
 
 cdef class JunctionRef(Obstacle):
@@ -131,7 +132,8 @@ cdef class JunctionRef(Obstacle):
 
     def addConnectionPin(self, unsigned int classId, unsigned int visDirs = 0):
         assert self.router
-        avoid.ShapeConnectionPin(<avoid.JunctionRef*>self.thisptr, classId, visDirs)
+        avoid.ShapeConnectionPin(<avoid.JunctionRef*>self.thisptr,
+                                 classId, visDirs)
 
 
 cdef void _connref_callback(void *ptr):
@@ -236,7 +238,10 @@ cdef class Router:
 
     def __dealloc__(Router self):
         # Clean up dangling updates (not the Python one!)
-        self.thisptr.processTransaction()
+        #try:
+        #    self.thisptr.processTransaction()
+        #except RuntimeError:
+        #    logging.error('Error while cleaning up router', exc_info=1)
         debug('Router%s.__dealloc__', self)
         del self.thisptr
         debug('Router%s.__dealloc__ finished', self)

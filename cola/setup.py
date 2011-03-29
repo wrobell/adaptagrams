@@ -59,6 +59,8 @@ setup(
         sources=sources,
         language="c++",
         include_dirs=['.'],
+        define_macros=[("USE_ASSERT_EXCEPTIONS", None)],
+        undef_macros=["NDEBUG"]
         )],
 
     cmdclass=cmdclass

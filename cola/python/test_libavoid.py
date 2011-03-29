@@ -21,6 +21,10 @@ def test_router_instantiation():
     del router
     assert_equals(None, w_router())
 
+@raises(RuntimeError)
+def test_router_wrong_instantiation():
+    router = Router(100)
+
 def test_router_shape_refcount():
     """
     Test if reference counting goes well with router and shapes.
@@ -57,6 +61,14 @@ def test_router_and_shape():
     assert_equals(2, sys.getrefcount(shape)) # shape + refcount
     router.processTransaction()
     assert_equals(2, sys.getrefcount(shape)) # shape + refcount
+    
+@raises(RuntimeError)
+def test_router_and_shape_add_delete():
+    router = Router()
+    poly = ((0, 0), (4, 0), (4, 4))
+    shape = ShapeRef(router, poly)
+    assert_true(shape in router.obstacles)
+    router.deleteShape(shape)
     
 def test_router_and_shape_delete_router():
     router = Router()
@@ -164,14 +176,12 @@ def test_routing_with_output():
     conn = ConnRef(router, (0, 0), (20, 0))
     router.processTransaction()
     router.outputInstanceToSVG('test_routing_with_output')
-    #router.removeShape(shape)
-    #router.processTransaction()
-    #del conn
-    #del shape
-    #del router
+    router.deleteShape(shape)
+    router.processTransaction()
+    del conn
+    del shape
+    del router
 
-
-#gc.set_debug(gc.DEBUG_STATS | gc.DEBUG_COLLECTABLE | gc.DEBUG_UNCOLLECTABLE | gc.DEBUG_INSTANCES)
 
 def callback(data):
     data.append(True)
@@ -200,6 +210,12 @@ def test_connref_callback():
     assert_equals(2, len(outlist))
     assert_equals(2, sys.getrefcount(callback))
 
+def test_connref_add_delete():
+    router = Router()
+    conn = ConnRef(router, (0, 0), (20, 0))
+    assert_true(router.connectors)
+    router.deleteConnector(conn)
+    assert_false(router.connectors)
 
 def test_connref_delete():
     router = Router()
