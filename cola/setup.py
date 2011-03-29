@@ -14,12 +14,12 @@ from distutils.extension import Extension
 # Fallback, in case Cython is not installed.
 try:
     from Cython.Distutils import build_ext
-    cmdclass = {'build_ext': build_ext}
+    extra_args = { 'cmdclass': {'build_ext': build_ext} }
     python_sources = [
         'libavoid/python-libavoid.pyx',
     ]
 except ImportError:
-    cmdclass = None
+    extra_args = {}
     python_sources = [
         'libavoid/python-libavoid.cpp',
     ]
@@ -76,7 +76,7 @@ setup(
         undef_macros=["NDEBUG"]
         )],
 
-    cmdclass=cmdclass
+    **extra_args
 )
 
 # vim:sw=4:et:ai
