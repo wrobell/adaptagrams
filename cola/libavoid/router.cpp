@@ -223,6 +223,9 @@ Router::~Router()
         conn = connRefs.begin();
     }
 
+    // Purge action list. We're closing down anyway.
+    actionList.clear();
+
     // Remove remaining obstacles (shapes and junctions).
     ObstacleList::iterator obstacle =  m_obstacles.begin();
     while (obstacle != m_obstacles.end())
