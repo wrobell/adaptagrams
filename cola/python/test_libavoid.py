@@ -15,7 +15,7 @@ def test_rectangle():
 
 
 def test_router_instantiation():
-    router = Router(Router.POLY_LINE)
+    router = Router(POLY_LINE_ROUTING)
     assert_equals(2, sys.getrefcount(router)) # router + refcount
     w_router = weakref.ref(router)
     del router
@@ -151,7 +151,7 @@ def test_connref_with_point():
 
 
 def test_connref_with_point_orthogonal():
-    router = Router(Router.ORTHOGONAL)
+    router = Router(ORTHOGONAL_ROUTING)
     conn = ConnRef(router)
     conn.setSourceEndpoint((2,3))
     conn.setDestEndpoint((10,10))

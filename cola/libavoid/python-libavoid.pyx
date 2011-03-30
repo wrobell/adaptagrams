@@ -214,19 +214,19 @@ cdef class ConnRef:
             return from_polygon(self.thisptr.displayRoute())
 
 
+# RoutingFlag
+POLY_LINE_ROUTING = avoid.PolyLineRouting
+ORTHOGONAL_ROUTING = avoid.OrthogonalRouting
+
+# PenaltyType
+SEGMENT_PENALTY = avoid.segmentPenalty
+ANGLE_PENALTY = avoid.anglePenalty
+CROSSING_PENALTY = avoid.crossingPenalty
+CLUSTER_CROSSING_PENALTY = avoid.clusterCrossingPenalty
+FIXED_SHARED_PATH_PENALTY = avoid.fixedSharedPathPenalty
+PORT_DIRECTION_PENALTY = avoid.portDirectionPenalty
+
 cdef class Router:
-    # RoutingFlag
-    POLY_LINE = avoid.PolyLineRouting
-    ORTHOGONAL = avoid.OrthogonalRouting
-
-    # PenaltyType
-    SEGMENT_PENALTY = avoid.segmentPenalty
-    ANGLE_PENALTY = avoid.anglePenalty
-    CROSSING_PENALTY = avoid.crossingPenalty
-    CLUSTER_CROSSING_PENALTY = avoid.clusterCrossingPenalty
-    FIXED_SHARED_PATH_PENALTY = avoid.fixedSharedPathPenalty
-    PORT_DIRECTION_PENALTY = avoid.portDirectionPenalty
-
     cdef avoid.Router *thisptr
     cdef set _obstacles
     cdef set _connectors
