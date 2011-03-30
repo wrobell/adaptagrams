@@ -301,6 +301,23 @@ cdef class Router:
     def routingPenalty(Router self, unsigned int penaltyType):
         return self.thisptr.routingPenalty(<avoid.PenaltyType>penaltyType)
 
+#    def setRoutingOption(Router self, unsigned int option, bint value):
+#        self.thisptr.setRoutingOption(<avoid.RoutingOption>option, value)
+#
+#    def routingOption(Router self, unsigned int option):
+#        return self.thisptr.routingOption(<avoid.RoutingOption>option)
+
+    def setOrthogonalNudgeDistance(Router self, double dist):
+        """
+        Experimental!
+        """
+        assert dist >= 0
+        self.thisptr.setRoutingOption(avoid.nudgeOthogonalSegmentsConnectedToShapes, dist > 0)
+        self.thisptr.setOrthogonalNudgeDistance(dist)
+
+    def orthogonalNudgeDistance(Router self):
+        return self.thisptr.orthogonalNudgeDistance()
+
     def outputInstanceToSVG(Router self, char* c_string): 
         cdef avoid.std_string cpp_string = avoid.charp_to_stdstring(c_string) 
         self.thisptr.outputInstanceToSVG(cpp_string) 

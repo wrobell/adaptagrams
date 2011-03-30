@@ -52,6 +52,8 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         fixedSharedPathPenalty
         portDirectionPenalty
 
+    cdef enum RoutingOption:
+        nudgeOthogonalSegmentsConnectedToShapes
 
     cdef cppclass Router
     cdef cppclass ConnRef
@@ -180,6 +182,12 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         void deleteJunction(JunctionRef*) except +critical_failure
  
         void deleteConnector(ConnRef*) except +critical_failure
+
+        void setOrthogonalNudgeDistance(double dist)
+        double orthogonalNudgeDistance()
+
+        void setRoutingOption(RoutingOption option, bint value)
+        bint routingOption(RoutingOption option)
 
         #ObstacleList m_obstacles;
         #ConnRefList connRefs;
