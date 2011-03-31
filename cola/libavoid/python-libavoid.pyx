@@ -53,6 +53,21 @@ def rectangle(object topLeft, object bottomRight):
 cdef class Router
 
 
+ATTACH_POS_TOP = 0.0
+ATTACH_POS_LEFT = 0.0
+ATTACH_POS_CENTRE = 0.5
+ATTACH_POS_BOTTOM = 1.0
+ATTACH_POS_RIGHT = 1.0
+
+
+CONN_DIR_NONE = avoid.ConnDirNone
+CONN_DIR_UP = avoid.ConnDirUp
+CONN_DIR_DOWN = avoid.ConnDirDown
+CONN_DIR_LEFT = avoid.ConnDirLeft
+CONN_DIR_RIGHT = avoid.ConnDirRight
+CONN_DIR_ALL = avoid.ConnDirAll
+
+
 cdef class Obstacle:
     cdef avoid.Obstacle *thisptr
     cdef object _router_ref
@@ -86,11 +101,6 @@ cdef class ShapeRef(Obstacle):
     """
     A ShapeRef denotes some shape lines should be routed around.
     """
-    ATTACH_POS_TOP = 0
-    ATTACH_POS_LEFT = 0
-    ATTACH_POS_CENTRE = 0.5
-    ATTACH_POS_BOTTOM = 1
-    ATTACH_POS_RIGHT = 1
 
     def __cinit__(object self, Router router not None, object points not None):
         cdef avoid.Polygon polygon = avoid.Polygon(len(points))
@@ -144,6 +154,7 @@ cdef void _connref_callback(void *ptr):
             self._callback[0](*(self._callback[1]))
         except:
             logging.error('Error while invoking callback', exc_info=1)
+
 
 cdef class ConnRef:
     cdef avoid.ConnRef *thisptr
