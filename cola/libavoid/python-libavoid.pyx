@@ -1,5 +1,6 @@
 
-from cython.operator cimport dereference as deref
+from libcpp.pair cimport pair
+from libcpp.vector cimport vector
 cimport avoid
 
 from cpython.weakref cimport PyWeakref_NewRef, PyWeakref_GetObject, PyWeakref_CheckRef
@@ -22,20 +23,28 @@ cdef unsigned int iid(object o):
 # In the next case ownership is passed to the parent shapeRef/junctionRef
 #        Avoid::ShapeConnectionPin
 
-cdef inline void to_polygon(object points, avoid.Polygon &polygon):
+cdef inline void to_point_vector(object points, vector[avoid.Point] &ps):
     cdef int i
     cdef double x, y
     for i, (x, y) in enumerate(points):
-        polygon.ps[i] = avoid.Point(x, y)
+        ps[i] = avoid.Point(x, y)
+
+
+cdef inline void to_polygon(object points, avoid.Polygon &polygon):
+    to_point_vector(points, polygon.ps)
+
+
+cdef inline object from_point_vector(vector[avoid.Point] &ps):
+    cdef unsigned int index
+    cdef object points = []
+    for index from 0 <= index < ps.size():
+        points.append((ps[index].x,
+                       ps[index].y))
+    return points
 
 
 cdef inline object from_polygon(avoid.Polygon &polygon):
-        cdef unsigned int index
-        cdef object points = []
-        for index from 0 <= index < polygon.ps.size():
-            points.append((polygon.ps[index].x,
-                           polygon.ps[index].y))
-        return points
+    return from_point_vector(polygon.ps)
 
 
 def rectangle(object topLeft, object bottomRight):
@@ -223,6 +232,16 @@ cdef class ConnRef:
         def __get__(self):
             assert self.router
             return from_polygon(self.thisptr.displayRoute())
+
+    property routingCheckpoints:
+        def __get__(self):
+            cdef vector[avoid.Point] ps = self.thisptr.routingCheckpoints()
+            return from_point_vector(ps)
+        def __set__(self, object checkpoints):
+            cdef vector[avoid.Point] ps = vector[avoid.Point](len(checkpoints))
+            to_point_vector(checkpoints, ps)
+            self.thisptr.setRoutingCheckpoints(ps)
+
 
 
 # RoutingFlag

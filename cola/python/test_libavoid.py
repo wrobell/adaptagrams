@@ -236,5 +236,12 @@ def test_connref_delete():
     else:
         assert 0, 'AssertionError should have been raised'
 
+def test_connref_routing_checkpoints():
+    router = Router()
+    conn = ConnRef(router, (0, 0), (20, 0))
+    conn.routingCheckpoints = ((3, 3), (4, 8))
+    assert_equals([(3.0, 3.0), (4.0, 8.0)], conn.routingCheckpoints)
+    # Required:
+    router.processTransaction()
 
 # vim:sw=4:et:ai
