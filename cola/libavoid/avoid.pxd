@@ -142,7 +142,6 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         ConnEnd(JunctionRef*)
         Point position()
 
-
     cdef cppclass ConnRef:
         ConnRef(Router *router, unsigned int id) except +critical_failure
         ConnRef(Router *router, ConnEnd& src, ConnEnd& dst, unsigned int id) except +critical_failure
@@ -158,7 +157,7 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         void setCallback(conn_ref_cb, void *ptr)
         ConnType routingType()
         void setRoutingType(ConnType)
-        pair[JunctionRef, ConnRef] splitAtSegment(size_t segmentN) except +critical_failure
+        #pair[JunctionRef*, ConnRef*] splitAtSegment(size_t segmentN) except +critical_failure
         void setRoutingCheckpoints(vector[Point]& checkpoints)
         vector[Point] routingCheckpoints()
 
