@@ -53,7 +53,7 @@ cdef extern from "libavoid/libavoid.h" namespace "Avoid":
         portDirectionPenalty
 
     cdef enum RoutingOption:
-        nudgeOthogonalSegmentsConnectedToShapes
+        nudgeOrthogonalSegmentsConnectedToShapes
 
     cdef cppclass Router
     cdef cppclass ConnRef

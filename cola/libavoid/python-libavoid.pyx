@@ -105,7 +105,6 @@ cdef class Obstacle:
             assert self.thisptr, 'Backing instance has been deleted'
             return self._router_ref and <object>PyWeakref_GetObject(self._router_ref)
 
-
 cdef class ShapeRef(Obstacle):
     """
     A ShapeRef denotes some shape lines should be routed around.
@@ -342,7 +341,7 @@ cdef class Router:
         Experimental!
         """
         assert dist >= 0
-        self.thisptr.setRoutingOption(avoid.nudgeOthogonalSegmentsConnectedToShapes, dist > 0)
+        self.thisptr.setRoutingOption(avoid.nudgeOrthogonalSegmentsConnectedToShapes, dist > 0)
         self.thisptr.setOrthogonalNudgeDistance(dist)
 
     def orthogonalNudgeDistance(Router self):

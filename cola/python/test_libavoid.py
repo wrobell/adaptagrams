@@ -88,6 +88,13 @@ def test_shaperef_move_on_different_router():
     shape = ShapeRef(router, poly)
     router2.moveShapeRel(shape, 1, 1)
 
+def test_shaperef_destroyed_router():
+    router = Router()
+    poly = ((0, 0), (4, 0), (4, 4))
+    shape = ShapeRef(router, poly)
+    del router
+    shape.addConnectionPin(0, 0, 0)
+
 @raises(AssertionError)
 def test_shaperef_methodcall_after_deletion():
     router = Router()
