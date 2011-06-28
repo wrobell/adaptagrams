@@ -76,7 +76,6 @@ void Timer::Register(const TimerIndex t, const bool start)
 
 void Timer::Start(void)
 {
-    COLA_ASSERT(!running);
     cStart[type] = clock();  // CPU time
     running = true;
 }
