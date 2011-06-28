@@ -75,7 +75,7 @@ Obstacle::Obstacle(Router *router, Polygon ply, const unsigned int id)
 
 Obstacle::~Obstacle()
 {
-    COLA_ASSERT(!m_router->objectIsInQueuedActionList(this));
+    m_router->removeObjectFromQueuedActions(this);
 
     if (m_active)
     {
@@ -355,6 +355,19 @@ void Obstacle::removeFollowingConnEnd(ConnEnd *connEnd)
     m_following_conns.erase(connEnd);
 }
 
+
+ConnRefList Obstacle::attachedConnectors(void) const
+{
+    ConnRefList attachedConns;
+    for (std::set<ConnEnd *>::const_iterator curr = m_following_conns.begin();
+            curr != m_following_conns.end(); ++curr)
+    {
+        ConnEnd *connEnd = *curr;
+        COLA_ASSERT(connEnd->m_conn_ref != NULL);
+        attachedConns.push_back(connEnd->m_conn_ref);
+    }
+    return attachedConns;
+}
 
 }
 

@@ -3,7 +3,7 @@
  *
  * libavoid - Fast, Incremental, Object-avoiding Line Router
  *
- * Copyright (C) 2004-2010  Monash University
+ * Copyright (C) 2004-2011  Monash University
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -37,6 +37,7 @@
 #include "libavoid/vertices.h"
 #include "libavoid/graph.h"
 #include "libavoid/timer.h"
+#include "libavoid/hyperedge.h"
 
 #if defined(LINEDEBUG) || defined(ASTAR_DEBUG) || defined(LIBAVOID_SDL)
     #include <SDL.h>
@@ -131,15 +132,38 @@ enum RoutingOption
     //! @brief  This option causes the final segments of connectors, which
     //!         are attached to shapes, to be nudged apart.  Usually these
     //!         segments are fixed, since they are considered to be attached
-    //!         to ports.
-    //! @note   This option is still experimental, and not implemented in an
-    //!         optimal fashion.  As such, it will slow down routing.
-    nudgeOthogonalSegmentsConnectedToShapes = 0,
-    // Used for determining the size of the routing options array.  
+    //!         to ports.  This option is not set by default.
+    nudgeOrthogonalSegmentsConnectedToShapes = 0,
+    //! @brief  This option causes hyperedge routes to be locally improved
+    //!         fixing obviously bad paths.  As part of this process libavoid
+    //!         will effectively move junctions, setting new ideal positions
+    //!         ( JunctionRef::recommendedPosition() ) for each junction.
+    improveHyperedgeRoutesMovingJunctions,
+    // Used for determining the size of the routing options array.
     // This should always we the last value in the enum.
     lastRoutingOptionMarker
 };
 
+
+// NOTE: This is an internal helper class that should not be used by the user.
+//
+// This class allows edges in the visibility graph to store a
+// pointer to a boolean registering when a connector needs to
+// reroute, while allowing connectors to be deleted without
+// needing to scan and remove these references from the visibility
+// graph.  Instead the bool is stored in this delegate and the
+// connector is alerted later, so long as it hasn't since been
+// deleted.
+class ConnRerouteFlagDelegate {
+    public:
+        ConnRerouteFlagDelegate();
+        ~ConnRerouteFlagDelegate();
+        bool *addConn(ConnRef *conn);
+        void removeConn(ConnRef *conn);
+        void alertConns(void);
+    private:
+        std::list<std::pair<ConnRef *, bool> > m_mapping;
+};
 
 static const double noPenalty = 0;
 static const double chooseSensiblePenalty = -1;
@@ -427,29 +451,34 @@ class Router {
         //!
         bool routingOption(const RoutingOption option) const;
 
-        void deleteCluster(ClusterRef *cluster);
+        //! @brief  Returns a pointer to the hyperedge rerouter for the router.
+        //!
+        //! @return  A HyperedgeRerouter object that can be used to register
+        //!          hyperedges for rerouting.
+        //!
+        HyperedgeRerouter *hyperedgeRerouter(void);
 
-#if 0
-        // XXX: attachedShapes and attachedConns both need to be rewritten
-        //      for constant time lookup of attached objects once this info
-        //      is stored better within libavoid.  Also they shouldn't need to
-        //      be friends of ConnRef.
+        //! @brief  Generates an SVG file containing debug output and code that
+        //!         can be used to regenerate the instance.
+        //!
+        //! @param[in] filename  The filename to use for the output file, if
+        //!                      not given "libavoid-debug.svg" will be used.
+        //!
+        void outputInstanceToSVG(std::string filename = std::string());
+
+        void deleteCluster(ClusterRef *cluster);
         void attachedShapes(IntList &shapes, const unsigned int shapeId,
                 const unsigned int type);
         void attachedConns(IntList &conns, const unsigned int shapeId,
                 const unsigned int type);
-#endif
-        
         void markConnectors(Obstacle *obstacle);
         void generateContains(VertInf *pt);
         void printInfo(void);
-        void outputInstanceToSVG(std::string filename = std::string());
         unsigned int assignId(const unsigned int suggestedId);
         void regenerateStaticBuiltGraph(void);
         void destroyOrthogonalVisGraph(void);
         void setStaticGraphInvalidated(const bool invalidated);
         ConnType validConnType(const ConnType select = ConnType_None) const;
-        bool objectIsInQueuedActionList(void *object) const;
         double& penaltyRef(const PenaltyType penType);
         bool existsOrthogonalPathOverlap(void);
         bool existsOrthogonalTouchingPaths(void);
@@ -461,6 +490,7 @@ class Router {
         friend class JunctionRef;
         friend class Obstacle;
         friend class ClusterRef;
+        friend class MinimumTerminalSpanningTree;
 
         void addShape(ShapeRef *shape);
         void addJunction(JunctionRef *junction);
@@ -470,7 +500,7 @@ class Router {
                 const ConnEnd &connEnd);
         void modifyConnectionPin(ShapeConnectionPin *pin);
 
-        void removeQueuedConnectorActions(ConnRef *conn);
+        void removeObjectFromQueuedActions(const void *object);
         void newBlockingShape(const Polygon& poly, int pid);
         void checkAllBlockedEdges(int pid);
         void checkAllMissingEdges(void);
@@ -491,24 +521,8 @@ class Router {
         double _routingPenalties[lastPenaltyMarker];
         bool _routingOptions[lastRoutingOptionMarker];
 
-        // This class allows edges in the visibility graph to store a
-        // pointer to a boolean registering when a connector needs to
-        // reroute, while allowing connectors to be deleted without
-        // needing to scan and remove these references from the visibility
-        // graph.  Instead the bool is stored in this delegate and the
-        // connector is alerted later, so long as it hasn't since been
-        // deleted.
-        class ConnRerouteFlagDelegate {
-            public:
-                ConnRerouteFlagDelegate();
-                ~ConnRerouteFlagDelegate();
-                bool *addConn(ConnRef *conn);
-                void removeConn(ConnRef *conn);
-                void alertConns(void);
-            private:
-                std::list<std::pair<ConnRef *, bool> > m_mapping;
-        };
         ConnRerouteFlagDelegate m_conn_reroute_flags;
+        HyperedgeRerouter m_hyperedge_rerouter;
 public:
         // Overall modes:
         bool _polyLineRouting;
