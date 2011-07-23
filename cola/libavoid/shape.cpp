@@ -47,8 +47,8 @@ ShapeRef::~ShapeRef()
 {
     if (m_router->m_currently_calling_destructors == false)
     {
-        fprintf(stderr, "ERROR: ShapeRef::~ShapeRef() shouldn't be called directly.\n");
-        fprintf(stderr, "       It is owned by the router.  Call Router::deleteShape() instead.\n");
+        err_printf("ERROR: ShapeRef::~ShapeRef() shouldn't be called directly.\n");
+        err_printf("       It is owned by the router.  Call Router::deleteShape() instead.\n");
         abort();
     }
 }
@@ -62,7 +62,7 @@ void ShapeRef::moveAttachedConns(const Polygon& newPoly)
     {
         ConnEnd *connEnd = *curr;
         COLA_ASSERT(connEnd->m_conn_ref != NULL);
-        m_router->modifyConnector(connEnd->m_conn_ref, connEnd->type(), 
+        m_router->modifyConnector(connEnd->m_conn_ref, connEnd->endpointType(), 
                 *connEnd);
     }
     for (ShapeConnectionPinSet::iterator curr = 

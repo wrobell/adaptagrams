@@ -106,8 +106,8 @@ ConnRef::~ConnRef()
 {
     if (m_router->m_currently_calling_destructors == false)
     {
-        fprintf(stderr, "ERROR: ConnRef::~ConnRef() shouldn't be called directly.\n");
-        fprintf(stderr, "       It is owned by the router.  Call Router::deleteConnector() instead.\n");
+        err_printf("ERROR: ConnRef::~ConnRef() shouldn't be called directly.\n");
+        err_printf("       It is owned by the router.  Call Router::deleteConnector() instead.\n");
         abort();
     }
 
@@ -337,6 +337,42 @@ void ConnRef::setDestEndpoint(const ConnEnd& dstPoint)
 }
 
 
+// Given the start or end vertex of a connector, returns the ConnEnd that 
+// can be used to reproduce that endpoint.  This is used for hyperedge routing.
+//
+bool ConnRef::getConnEndForEndpointVertex(VertInf *vertex, 
+        ConnEnd& connEnd) const 
+{
+    if (vertex == m_src_vert)
+    {
+        if (m_src_connend)
+        {
+            connEnd = *m_src_connend;
+        }
+        else
+        {
+            connEnd = ConnEnd(Point(m_src_vert->point.x, m_src_vert->point.y),
+                    m_src_vert->visDirections);
+        }
+        return true;
+    }
+    else if (vertex == m_dst_vert)
+    {
+        if (m_dst_connend)
+        {
+            connEnd = *m_dst_connend;
+        }
+        else
+        {
+            connEnd = ConnEnd(Point(m_dst_vert->point.x, m_dst_vert->point.y),
+                    m_dst_vert->visDirections);
+        }
+        return true;
+    }
+    return false;
+}
+
+
 void ConnRef::updateEndPoint(const unsigned int type, const ConnEnd& connEnd)
 {
     common_updateEndPoint(type, connEnd);
@@ -384,6 +420,13 @@ std::pair<Obstacle *, Obstacle *> ConnRef::endpointAnchors(void) const
     return anchors;
 }
 
+std::pair<ConnEnd, ConnEnd> ConnRef::endpointConnEnds(void) const
+{
+    std::pair<ConnEnd, ConnEnd> endpoints;
+    getConnEndForEndpointVertex(m_src_vert, endpoints.first);
+    getConnEndForEndpointVertex(m_dst_vert, endpoints.second);
+    return endpoints;
+}
 
 bool ConnRef::setEndpoint(const unsigned int type, const VertID& pointID,
         Point *pointSuggestion)
@@ -903,10 +946,10 @@ void ConnRef::generateCheckpointsPath(std::vector<Point>& path,
         }
         else
         {
-            fprintf(stdout, "Warning: skipping checkpoint for connector "
+            err_printf("Warning: skipping checkpoint for connector "
                     "%d at (%g, %g).\n", (int) id(), 
                     vertices[i]->point.x, vertices[i]->point.y);
-            fflush(stdout);
+            fflush(stderr);
         }
     }
     // Use topbit to differentiate between start and end point of connector.

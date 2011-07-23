@@ -22,8 +22,6 @@
  * Author(s):   Michael Wybrow <mjwybrow@users.sourceforge.net>
 */
 
-#include <algorithm>
-
 #include "libavoid/hyperedge.h"
 #include "libavoid/hyperedgetree.h"
 #include "libavoid/mtst.h"
@@ -38,9 +36,14 @@
 
 namespace Avoid {
 
-HyperedgeRerouter::HyperedgeRerouter(Router *router)
-    : m_router(router)
+HyperedgeRerouter::HyperedgeRerouter()
+    : m_router(NULL)
 {
+}
+
+void HyperedgeRerouter::setRouter(Router *router)
+{
+    m_router = router;
 }
 
 size_t HyperedgeRerouter::registerHyperedgeForRerouting(
@@ -210,6 +213,8 @@ void HyperedgeRerouter::findAttachedObjects(size_t index,
 // connectors so they can be ignored for individual rerouting.
 ConnRefSet HyperedgeRerouter::calcHyperedgeConnectors(void)
 {
+    COLA_ASSERT(m_router != NULL);
+
     ConnRefSet allRegisteredHyperedgeConns;
 
     // Clear the deleted-object vectors.  We populate them here if necessary.
@@ -260,6 +265,8 @@ ConnRefSet HyperedgeRerouter::calcHyperedgeConnectors(void)
 
 void HyperedgeRerouter::performRerouting(void)
 {
+    COLA_ASSERT(m_router != NULL);
+
     m_new_junctions_vector.clear();
     m_new_junctions_vector.resize(count());
     m_new_connectors_vector.clear();
@@ -276,8 +283,15 @@ void HyperedgeRerouter::performRerouting(void)
                 &hyperEdgeTreeJunctions);
         mtst.execute();
 
+        HyperEdgeTreeNode *treeRoot = mtst.rootJunction();
+        COLA_ASSERT(treeRoot);
+        
+        // Fill in connector information and join them to junctions of endpoints
+        // of original connectors.
+        treeRoot->addConns(NULL, m_router, 
+                m_deleted_connectors_vector[i], NULL);
+
         // Output the list of new junctions and connectors from hyperedge tree.
-        HyperEdgeTreeNode *treeRoot = hyperEdgeTreeJunctions.begin()->second;
         treeRoot->listJunctionsAndConnectors(NULL, m_new_junctions_vector[i],
                 m_new_connectors_vector[i]);
 

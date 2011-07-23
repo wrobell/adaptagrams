@@ -27,6 +27,7 @@
 #include "libavoid/junction.h"
 #include "libavoid/router.h"
 #include "libavoid/connectionpin.h"
+#include "libavoid/debug.h"
 
 
 namespace Avoid {
@@ -46,8 +47,8 @@ JunctionRef::~JunctionRef()
 {
     if (m_router->m_currently_calling_destructors == false)
     {
-        fprintf(stderr, "ERROR: JunctionRef::~JunctionRef() shouldn't be called directly.\n");
-        fprintf(stderr, "       It is owned by the router.  Call Router::deleteJunction() instead.\n");
+        err_printf("ERROR: JunctionRef::~JunctionRef() shouldn't be called directly.\n");
+        err_printf("       It is owned by the router.  Call Router::deleteJunction() instead.\n");
         abort();
     }
 }
@@ -188,7 +189,7 @@ void JunctionRef::moveAttachedConns(const Point& newPosition)
     {
         ConnEnd *connEnd = *curr;
         COLA_ASSERT(connEnd->m_conn_ref != NULL);
-        m_router->modifyConnector(connEnd->m_conn_ref, connEnd->type(), 
+        m_router->modifyConnector(connEnd->m_conn_ref, connEnd->endpointType(),
                 *connEnd);
     }
     for (ShapeConnectionPinSet::iterator curr = 
@@ -226,8 +227,8 @@ ConnRef *JunctionRef::removeJunctionAndMergeConnectors(void)
     }
     // Modify the first connectors junction endpoint to connect to the 
     // other end of the second connector.
-    m_router->modifyConnector(connEnd1->m_conn_ref, connEnd2Other->type(), 
-            *connEnd2Other);
+    m_router->modifyConnector(connEnd1->m_conn_ref,
+            connEnd2Other->endpointType(), *connEnd2Other);
 
     // Delete the second connector.
     m_router->deleteConnector(conn2);
