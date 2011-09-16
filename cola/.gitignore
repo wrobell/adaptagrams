@@ -29,7 +29,8 @@ Makefile.in
 
 Makefile
 
-/m4
+m4/*
+!m4/adaptagrams.m4
 config.guess
 config.log
 config.status

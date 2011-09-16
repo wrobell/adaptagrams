@@ -20,5 +20,6 @@ config.h*
 stamp-h1
 libtool
 ltmain.sh
-m4
+m4/*
+!m4/adaptagrams.m4
 missing
